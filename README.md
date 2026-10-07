@@ -114,7 +114,7 @@ For cross-compiling Windows binaries from Linux you need to install the MinGW cr
 - `x86_64-unknown-linux-gnu`
 - `x86_64-pc-windows-gnu`
 
-For usage, check out the [src/java](src/java), [src/python](src/python), and [src/nodejs](src/nodejs) folders.
+For usage, check out the [crates/translator/src/java](crates/translator/src/java), [crates/translator/src/python](crates/translator/src/python), and [crates/translator/src/nodejs](crates/translator/src/nodejs) folders.
 
 ## Acknowledgement
 
