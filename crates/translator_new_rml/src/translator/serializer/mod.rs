@@ -5,7 +5,7 @@ use operator::Serializer;
 use vocab::ToString;
 
 use super::store::SearchStore;
-use super::OperatorTranslator;
+use super::StoreOperatorTranslator;
 use crate::error::NewRMLTranslationResult;
 use crate::extractors::stringify_term;
 use crate::rml_model::v2::core::expression_map::term_map::CommonTermMapInfo;
@@ -21,7 +21,7 @@ fn format_var(var: &str) -> String {
     format!("?{}", var)
 }
 
-impl<'a> OperatorTranslator for SerializerOperatorTranslator<'a> {
+impl<'a> StoreOperatorTranslator for SerializerOperatorTranslator<'a> {
     type Input = Vec<&'a TriplesMap>;
 
     type Output = Serializer;

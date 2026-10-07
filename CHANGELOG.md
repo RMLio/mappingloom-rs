@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Java lib: don't build fat jar.
+- `translator_new_rml`: an operator translator that looks up other mapping parts implements `StoreOperatorTranslator::translate_with_store` (extend, join, serializer); `OperatorTranslator::translate` is required for the others (see HANDBOOK: How a mapping becomes a plan)
+
+### Removed
+- `SearchStore` fields and methods that nothing used: `reference_attr_map`, `add_reference_name`, `abs_ls_search_map`, `pm_search_map`, `om_search_map` and `gm_search_map`
+- Commented-out `FileTranslatorHandler` implementation in `translator::rml`
+- `architecture/README.md`, a future-work note on the crate split, and the unused `websocket_example.ttl`
 
 ## [0.8.0] - 2026-08-19
 

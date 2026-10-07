@@ -10,34 +10,8 @@ use translator_rml::OptimizedRMLDocumentTranslator;
 use crate::error::TranslationError;
 use crate::handler::TranslatorHandler;
 
-
 #[derive(Debug)]
 pub struct RMLHandler;
-
-/*impl FileTranslatorHandler for RMLFileHandler {
-    fn translate(
-        &self,
-        file_path: &dyn AsRef<str>,
-    ) -> Result<Plan<Init>, TranslationError> {
-        info!("Trying to translate file {} with RML v1 (old) spec translator https://rml.io/specs/rml/", file_path.as_ref());
-        if let Ok(document) = old_parse_file(file_path.as_ref().into()) {
-            Ok(OptimizedRMLDocumentTranslator::translate_to_plan(document)?)
-        } else {
-            warn!("Failed extracting with RML v1 (old) spec translator");
-            info!("Trying again with the RML v2 (new) spec translator https://kg-construct.github.io/rml-resources/portal/");
-            let document = translator_new_rml::extractors::io::parse_file(
-                file_path.as_ref().into(),
-            )
-            .map_err::<NewRMLTranslationError, _>(|err| err.into())?;
-
-            Ok(NewRMLDocumentTranslator::translate_to_plan(document)?)
-        }
-    }
-
-    fn supported_extension(&self) -> String {
-        "ttl".to_string()
-    }
-}*/
 
 impl TranslatorHandler for RMLHandler {
     fn translate(&self, mapping: &str) -> Result<Plan<Init>, TranslationError> {

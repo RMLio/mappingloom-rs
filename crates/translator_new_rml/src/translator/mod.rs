@@ -30,16 +30,20 @@ pub trait OperatorTranslator {
     type Output;
 
     fn translate(
-        _input: &Self::Input,
-    ) -> NewRMLTranslationResult<Self::Output> {
-        unimplemented!("Operator translator does not support translation without the usage of a search store")
-    }
+        input: &Self::Input,
+    ) -> NewRMLTranslationResult<Self::Output>;
+}
+
+/// An operator translator that looks up other mapping parts in the
+/// [`SearchStore`].
+pub trait StoreOperatorTranslator {
+    type Input;
+    type Output;
+
     fn translate_with_store(
-        _store: &SearchStore,
-        _input: &Self::Input,
-    ) -> NewRMLTranslationResult<Self::Output> {
-        unimplemented!("Operator translator does not support translation with the usage of a search store")
-    }
+        store: &SearchStore,
+        input: &Self::Input,
+    ) -> NewRMLTranslationResult<Self::Output>;
 }
 
 #[derive(Debug, Clone)]

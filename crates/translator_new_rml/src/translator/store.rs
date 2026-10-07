@@ -4,7 +4,6 @@ use plan::data_type::RcRefCellPlan;
 use plan::states::{Init, Processed};
 use plan::Plan;
 use sophia_term::RcTerm;
-use uuid::Uuid;
 
 use super::source::AbstractLogicalSourceTranslator;
 use super::OperatorTranslator;
@@ -18,24 +17,10 @@ use crate::rml_model::Document;
 #[derive(Debug, Clone, Default)]
 pub struct SearchStore<'a> {
     pub root_plan:              Option<Plan<Init>>,
-    pub reference_attr_map:     HashMap<String, String>,
     pub termm_id_quad_var_map:  HashMap<RcTerm, String>,
-
-
-    /// key: Abstract logical source URI 
-    ///
-    /// value: [AbstractLogicalSourceEnum]
-    pub abs_ls_search_map:      HashMap<u64, AbstractLogicalSourceEnum>,
-
     pub ls_id_sourced_plan_map: HashMap<u64, RcRefCellPlan<Processed>>,
     /// SubjectMap search map
     pub sm_search_map:          HashMap<RcTerm, &'a TermMapEnum>,
-    /// PredicateMap search map
-    pub pm_search_map:          HashMap<RcTerm, &'a TermMapEnum>,
-    /// ObjectMap search map
-    pub om_search_map:          HashMap<RcTerm, &'a TermMapEnum>,
-    /// GraphMap search map
-    pub gm_search_map:          HashMap<RcTerm, &'a TermMapEnum>,
 
     /// TriplesMap search map
     pub tm_search_map:          HashMap<RcTerm, &'a TriplesMap>,
@@ -64,21 +49,12 @@ impl SearchStore<'_> {
         result.into_iter().collect()
     }
 
-    pub fn add_reference_name(&mut self, reference: &str) -> &String {
-        self.reference_attr_map
-            .entry(reference.to_string())
-            .or_insert_with(|| Uuid::new_v4().to_string())
-    }
-
     pub fn from_document(
         document: &Document,
     ) -> NewRMLTranslationResult<SearchStore<'_>> {
         let mut tm_search_map = HashMap::new();
         let mut abs_ls_search_map: HashMap<u64, AbstractLogicalSourceEnum> = HashMap::new();
         let mut sm_search_map = HashMap::new();
-        let mut pm_search_map = HashMap::new();
-        let mut om_search_map = HashMap::new();
-        let mut gm_search_map = HashMap::new();
         let mut termm_id_quad_var_map = HashMap::new();
 
         for (tm_count, tm) in document.triples_maps.iter().enumerate(){
@@ -105,35 +81,27 @@ impl SearchStore<'_> {
                 .insert(sm_ident.clone(), format!("sm_{}", tm_count));
 
             if sm.is_subject_map() {
-                let sm_gms: Vec<_> = sm
+                let sm_gms_var_iter = sm
                     .unwrap_subject_map_ref()
                     .graph_maps
                     .iter()
-                    .map(|gm| (gm.as_ref().identifier.clone(), gm))
-                    .collect();
-
-                termm_id_quad_var_map.extend(sm_gms.iter().enumerate().map(
-                    |(gm_idx, (gm_ident, _))| {
+                    .enumerate()
+                    .map(|(gm_idx, gm)| {
                         (
-                            gm_ident.clone(),
+                            gm.as_ref().identifier.clone(),
                             format!("sm_{}_gm_{}", tm_count, gm_idx),
                         )
-                    },
-                ));
-                gm_search_map.extend(sm_gms);
+                    });
+
+                termm_id_quad_var_map.extend(sm_gms_var_iter);
             }
 
             for (pom_idx, pom) in tm.predicate_object_map_vec.iter().enumerate()
             {
-                let pom_gms: Vec<_> = pom
-                    .graph_map_vec
-                    .iter()
-                    .map(|gm| (gm.as_ref().identifier.clone(), gm))
-                    .collect();
-                let pom_gms_var_iter = pom_gms.iter().enumerate().map(
-                    |(gm_idx, (gm_ident, _))| {
+                let pom_gms_var_iter = pom.graph_map_vec.iter().enumerate().map(
+                    |(gm_idx, gm)| {
                         (
-                            gm_ident.clone(),
+                            gm.as_ref().identifier.clone(),
                             format!(
                                 "pom_{}_{}_gm_{}",
                                 tm_count, pom_idx, gm_idx
@@ -143,13 +111,6 @@ impl SearchStore<'_> {
                 );
 
                 termm_id_quad_var_map.extend(pom_gms_var_iter);
-                gm_search_map.extend(pom_gms);
-
-                pm_search_map = pom
-                    .predicate_map_vec
-                    .iter()
-                    .map(|pm| (pm.as_ref().identifier.clone(), pm))
-                    .collect();
 
                 let pm_var_iter = pom.predicate_map_vec.iter().enumerate().map(
                     |(pm_idx, pm)| {
@@ -163,11 +124,6 @@ impl SearchStore<'_> {
                     },
                 );
 
-                om_search_map = pom
-                    .object_map_vec
-                    .iter()
-                    .map(|om| (om.as_ref().identifier.clone(), om))
-                    .collect();
                 let om_var_iter = pom.object_map_vec.iter().enumerate().map(
                     |(om_idx, om)| {
                         (
@@ -192,14 +148,9 @@ impl SearchStore<'_> {
         Ok(SearchStore {
             termm_id_quad_var_map,
             sm_search_map,
-            pm_search_map,
-            om_search_map,
-            gm_search_map,
             tm_search_map,
             ls_id_sourced_plan_map,
-            abs_ls_search_map,
             root_plan: Some(root_plan),
-            reference_attr_map: HashMap::new(),
         })
     }
 }

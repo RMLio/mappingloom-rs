@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use super::extend::insert_non_constant_func;
 use super::store::SearchStore;
-use super::OperatorTranslator;
+use super::StoreOperatorTranslator;
 use crate::error::NewRMLTranslationResult;
 use crate::rml_model::v2::core::expression_map::BaseExpressionMapEnum;
 use crate::rml_model::v2::core::{RefObjectMap, TriplesMap};
@@ -24,7 +24,7 @@ pub struct JoinTranslator {}
 
 const PTM_SUBJ_SUFFIX: &str = "_obj";
 
-impl OperatorTranslator for JoinTranslator {
+impl StoreOperatorTranslator for JoinTranslator {
     type Input = TriplesMap;
 
     type Output = ();

@@ -54,7 +54,7 @@ Every implementation request handled by an AI agent/LLM follows these constraint
   - This contract holds only general rules for handling a request; project-specific guidance goes in the chapter on that topic.
 - Do not stop at making tests green; align the implementation with the specification or intended design, and document the semantic reason in this handbook.
 - Never remove or change existing tests (code or fixtures) without explicit permission. A change to an existing fixture (expected output, input, or data) is validated by the maintainer before it is kept, also when a tool writes it: propose the change with its reason, and keep it only after approval.
-- Update `CHANGELOG.md` for implementation changes: keep `## Unreleased` a short summary of what changed since the last release. A feature that is new since the last release is one Added line, which later fixes update instead of getting lines of their own; lines are for what a user of the last release notices.
+- Update `CHANGELOG.md` for every change, internal ones included (tests, CI, refactoring, removed code): keep `## Unreleased` a short summary of what changed since the last release. A feature that is new since the last release is one Added line, which later fixes update instead of getting lines of their own.
 - Check whether `README.md` needs updates for user-visible behavior or workflow changes, and update it when needed.
 - Write documentation (this handbook, READMEs, `TODO.md`, `CHANGELOG.md`, code comments) as plain positive statements: say what is true and leave out the contrast ("X, not Y"). Keep a negative only when it is the point itself, such as a prohibition, a warning, or a known limitation.
 - If there are difficulties during fulfillment, document them in the most appropriate existing handbook location (create a new chapter only when truly necessary) so future requests start with better context.
@@ -80,8 +80,6 @@ All crates live under `crates/` and are workspace members (`members = ["crates/*
 | `translator_normalized_rml` | Translator for normalized RML documents. |
 | `sparql-sat-checker` | Checks SPARQL/triples-map satisfiability on plans; uses `translator_normalized_rml`. It carries its own version (`0.1.0`) and edition 2024. |
 
-`architecture/README.md` holds future work on the crate split.
-
 ## How a mapping becomes a plan
 
 `translator::api::process` tries each `TranslatorHandler` in turn (`RMLHandler`,
@@ -93,6 +91,14 @@ looking at the document text: a document that contains the R2RML namespace
 (`<http://www.w3.org/ns/r2rml#>`) goes to `translator_rml` (RML v1); every
 other document goes to `translator_new_rml` (current RML spec). This detection
 is a heuristic, marked as a TODO in the code.
+
+`translator_new_rml` first indexes the document in a `SearchStore`
+(`translator/store.rs`): triples maps and subject maps by identifier, a quad
+variable per term map, and one sourced plan per group of effectively equal
+logical sources. Each operator translator implements one of two traits:
+`OperatorTranslator::translate` builds an operator from its input alone (source,
+iterator), and `StoreOperatorTranslator::translate_with_store` also looks up
+other mapping parts in the store (extend, join, serializer).
 
 The CLI writes the plan next to the input (or with the derived output prefix)
 as DOT and JSON; `-j` limits output to JSON. `stdin` prints the JSON plan to
@@ -118,6 +124,8 @@ workspace tests and the Java tests.
 
 Commit messages follow the conventional `type (scope): subject` format
 described in `.cmt` (types feat, fix, docs, style, refactor, test, chore).
+`.cmt` is the configuration of [cmt](https://github.com/smallhadroncollider/cmt),
+a commit formatting tool that prompts for these parts.
 
 ## Test resources
 

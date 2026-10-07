@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use super::error::TranslationError;
 use super::store::SearchStore;
-use super::OperatorTranslator;
+use super::StoreOperatorTranslator;
 use crate::error::{NewRMLTranslationError, NewRMLTranslationResult};
 use crate::extractors::stringify_term;
 use crate::rml_model::v2::core::expression_map::term_map::{
@@ -45,7 +45,7 @@ pub fn func_is_not_constant(func: &Function) -> bool {
 #[derive(Debug, Clone)]
 pub struct ExtendOperatorTranslator {}
 
-impl OperatorTranslator for ExtendOperatorTranslator {
+impl StoreOperatorTranslator for ExtendOperatorTranslator {
     type Input = TriplesMap;
 
     type Output = Extend;
