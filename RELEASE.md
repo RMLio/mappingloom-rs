@@ -4,6 +4,7 @@ Step-by-step instructions for publishing a release. [HANDBOOK.md](HANDBOOK.md) (
 
 ## Before you start
 
+- Everything changed since the previous release is reviewed: the code for correctness, and the documentation and changelog for accuracy and brevity.
 - bash (Git Bash on Windows), Maven, Rust with `cargo` (rustup installs the toolchain pinned in `rust-toolchain.toml`; the script runs `cargo check` to update `Cargo.lock`), Java 21, and `changefrog` (`npm install -g changefrog`), which writes the version section of `CHANGELOG.md`.
 - Push access to `origin` (https://gitlab.ilabt.imec.be/rml/proc/algemaploom-rs).
 - You are on `development`, up to date with `origin/development`, with a clean working tree.
