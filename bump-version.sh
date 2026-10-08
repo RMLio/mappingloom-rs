@@ -55,5 +55,17 @@ then
 	git push origin
 	git tag $tagname
 	git push origin $tagname
+
+	# Prepare the Java binding for the next development cycle, so a local
+	# build is distinguishable from the release.
+	if [[ $VERSION != testrelease-* ]] ; then
+		NEXT="${VERSION%.*}.$((${VERSION##*.} + 1))-SNAPSHOT"
+		cd crates/translator/src/java/algemaploom/
+		mvn versions:set -DnewVersion=$NEXT -DgenerateBackupPoms=false
+		cd $SCRIPTDIR
+		git add crates/translator/src/java/algemaploom/pom.xml
+		git commit -m "Prepare for next development cycle"
+		git push origin
+	fi
 fi
 

@@ -23,7 +23,8 @@ the plan.
 
 - Source: a Cargo workspace in Rust (toolchain pinned to 1.87.0 in
   `rust-toolchain.toml`), with every crate under `crates/`. The workspace
-  version (`0.8.0`) lives in the root `Cargo.toml`.
+  version (`0.8.0`) lives in the root `Cargo.toml`; the Java binding has its own
+  Maven version (see Release process).
 - CLIs: the `translator` crate builds `translator-bin`
   (`crates/translator/src/bin/translator-bin/`) with the subcommands `file`,
   `folder` and `stdin`, and the flags `-d` (debug logging), `-j` (JSON only)
@@ -38,7 +39,7 @@ the plan.
 
 ## Agent request contract (for AI agents/LLMs)
 
-<!-- software-handbook contract: 2026-10-07 -->
+<!-- software-handbook contract: 2026-10-08 -->
 
 Every implementation request handled by an AI agent/LLM follows these constraints:
 
@@ -46,8 +47,9 @@ Every implementation request handled by an AI agent/LLM follows these constraint
   - fix the specific failing case or issue named in the request;
   - preserve existing passing behavior unless explicitly asked not to;
   - add or update a regression test when needed.
-- Make the smallest coherent patch.
+- Make the smallest coherent patch. A documentation error found along the way is fixed in the same patch.
 - Leave the code leaner after every request: remove what the change makes redundant (duplicate tests, parameters and options that no longer do anything, helpers that duplicate each other, comments that only repeat the code), and reuse shared functionality instead of adding a local variant. Run `cargo clippy --workspace` to find unused code.
+- Fix a transient environment problem (a stale PATH, a shell or editor that needs a restart) in the environment, by restarting or reconfiguring it; add no code that works around it.
 - **Push back** when a request would violate an established principle (e.g. breaking test hermeticity). Explain the principle and suggest a documentation-only fix instead of silently implementing the harmful change.
 - Update this handbook so the change is documented as well as implemented.
   - Document only the latest state, integrated in the surrounding narrative (principles, behavior, rationale), including the choices made and why.
@@ -170,7 +172,14 @@ targets.
 1. sets the version in `Cargo.toml` and runs `cargo check` to update `Cargo.lock`;
 2. sets the version in the Java `pom.xml` (`mvn versions:set`) and in `package.json`;
 3. optionally adds the version to `CHANGELOG.md` with `changefrog`;
-4. optionally commits, tags `v<version>` (or the bare version for `testrelease-*`) and pushes.
+4. optionally commits, tags `v<version>` (or the bare version for `testrelease-*`) and pushes;
+5. after a pushed release, sets the Java `pom.xml` to the next patch `-SNAPSHOT` (e.g. `0.8.1-SNAPSHOT` after `0.8.0`), and commits and pushes that as "Prepare for next development cycle".
+
+Between releases the Java binding carries that `-SNAPSHOT` version, as the
+KNoWS Java libraries do, so a locally installed MappingLoom stays apart from
+the released artifact in `~/.m2`. `Cargo.toml` and `package.json` keep the
+released version until the next release; development versions for the Python
+and Node.js packages are still to be worked out.
 
 A pushed tag triggers the `Maven Central Deployment` CI job, which signs and
 deploys the Java package from `crates/translator/src/java/algemaploom`.
