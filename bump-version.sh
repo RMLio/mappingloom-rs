@@ -23,6 +23,13 @@ function yes_or_no {
 SCRIPTDIR=$(dirname $(readlink -f $0))
 
 VERSION=$1
+
+# A release version is X.Y.Z; the next development version is derived from it.
+if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && $VERSION != testrelease-* ]]; then
+	echo "Version must be X.Y.Z or testrelease-*, got: $VERSION"
+	exit 1
+fi
+
 echo "Changing version to $VERSION"
 
 echo 'Updating Cargo.toml...'
@@ -31,7 +38,7 @@ cargo check
 
 echo 'Updating pom.xml...'
 cd crates/translator/src/java/algemaploom/
-mvn versions:set -DnewVersion=$VERSION
+mvn versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
 cd $SCRIPTDIR
 
 echo 'Updating package.json...'

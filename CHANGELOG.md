@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-- `RELEASE.md`: step-by-step instructions for publishing a release.
+- Release tooling: `RELEASE.md` documents the steps; `bump-version.sh` checks the version format.
 
 ### Changed
 - Java lib: don't build fat jar.
