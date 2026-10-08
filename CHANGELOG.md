@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+- `RELEASE.md`: step-by-step instructions for publishing a release.
+
 ### Changed
 - Java lib: don't build fat jar.
 - Java lib: between releases the Maven version is the next patch `-SNAPSHOT` (now `0.8.1-SNAPSHOT`); `bump-version.sh` sets it after each release.

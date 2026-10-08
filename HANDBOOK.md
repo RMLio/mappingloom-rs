@@ -167,6 +167,8 @@ targets.
 
 ## Release process
 
+Step-by-step instructions are in [RELEASE.md](RELEASE.md); this section explains the tooling.
+
 `./bump-version.sh <version>` performs a release:
 
 1. sets the version in `Cargo.toml` and runs `cargo check` to update `Cargo.lock`;
