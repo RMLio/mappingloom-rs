@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Java lib: don't build fat jar.
 - Java lib: between releases the Maven version is the next patch `-SNAPSHOT` (now `0.8.1-SNAPSHOT`); `bump-version.sh` sets it after each release.
+- `sparql-sat-checker` is marked unmaintained, and its crate documentation lists its known defects.
 - `translator_new_rml`: an operator translator that looks up other mapping parts implements `StoreOperatorTranslator::translate_with_store` (extend, join, serializer); `OperatorTranslator::translate` is required for the others (see HANDBOOK: How a mapping becomes a plan)
 
 ### Removed
