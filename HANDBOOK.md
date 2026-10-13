@@ -40,7 +40,7 @@ the plan.
 
 ## Agent request contract (for AI agents/LLMs)
 
-<!-- software-handbook contract: 2026-10-09 -->
+<!-- software-handbook contract: 2026-10-13 -->
 
 Every implementation request handled by an AI agent/LLM follows these constraints:
 
@@ -57,7 +57,7 @@ Every implementation request handled by an AI agent/LLM follows these constraint
   - Document only the latest state, integrated in the surrounding narrative (principles, behavior, rationale), including the choices made and why.
   - This contract holds only general rules for handling a request; project-specific guidance goes in the chapter on that topic.
 - Do not stop at making tests green; align the implementation with the specification or intended design, and document the semantic reason in this handbook.
-- Never remove or change existing tests (code or fixtures) without explicit permission. A change to an existing fixture (expected output, input, or data) is validated by the maintainer before it is kept, also when a tool writes it: propose the change with its reason, and keep it only after approval.
+- Update existing tests (code or fixtures) in the same patch when the change requires it, and list each update with its reason in the hand-over; the maintainer reviews them before staging. Never weaken a test only to make it pass.
 - Update `CHANGELOG.md` for every change, internal ones included (tests, CI, refactoring, removed code): keep `## Unreleased` a short summary of what changed since the last release. A feature that is new since the last release is one Added line, which later fixes update instead of getting lines of their own. Each line covers one concern; changes of the same concern share a line (such as editorial changes, or updated dependency versions). A line states what is true now, without the old behavior; a fix that only removes a divergence that should not have existed (one part behaving unlike the rest) gets a few words in the line of its concern at most.
 - Before a release, propose a review of everything changed since the previous release: the code for correctness, and the documentation and changelog for accuracy and brevity.
 - Check whether `README.md` needs updates for user-visible behavior or workflow changes, and update it when needed.
@@ -104,6 +104,15 @@ logical sources. Each operator translator implements one of two traits:
 `OperatorTranslator::translate` builds an operator from its input alone (source,
 iterator), and `StoreOperatorTranslator::translate_with_store` also looks up
 other mapping parts in the store (extend, join, serializer).
+
+The serializer of one source holds the triple patterns of all its triples maps,
+as a template of N-Quads lines. Graph membership is decided per
+predicate-object map, as RML-KGC defines it: a map's triples go to every graph
+map of the subject map together with every graph map of that predicate-object
+map, and to the default graph when there is none (`rml:defaultGraph` also names
+the default graph). The class triples of a subject map follow the subject map's
+graph maps only. `serializer/mod.rs` tests this with a mapping whose
+predicate-object maps differ in their graph maps.
 
 The CLI writes the plan next to the input (or with the derived output prefix)
 as DOT and JSON; `-j` limits output to JSON. `stdin` prints the JSON plan to

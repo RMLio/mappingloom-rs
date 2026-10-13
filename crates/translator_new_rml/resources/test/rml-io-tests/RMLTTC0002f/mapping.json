@@ -110,7 +110,7 @@
       "operator": {
         "type": "SerializerOp",
         "config": {
-          "template": "?sm_0 <http://xmlns.com/foaf/0.1/name> ?pom_0_0_om_0 <http://example.org/PeopleGraph> .",
+          "template": "?sm_0 <http://xmlns.com/foaf/0.1/age> ?pom_0_1_om_0 .\n?sm_0 <http://xmlns.com/foaf/0.1/name> ?pom_0_0_om_0 <http://example.org/PeopleGraph> .",
           "format": "NQuads"
         }
       }
