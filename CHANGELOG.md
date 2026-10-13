@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `sparql-sat-checker` is marked unmaintained, and its crate documentation lists its known defects.
 - `translator_new_rml`: an operator translator that looks up other mapping parts implements `StoreOperatorTranslator::translate_with_store` (extend, join, serializer); `OperatorTranslator::translate` is required for the others (see HANDBOOK: How a mapping becomes a plan)
 
+### Fixed
+- `translator-bin stdin` and the Java binding's `Cli` read the mapping with its line breaks, so a Turtle comment ends at its line.
+
 ### Removed
 - `SearchStore` fields and methods that nothing used: `reference_attr_map`, `add_reference_name`, `abs_ls_search_map`, `pm_search_map`, `om_search_map` and `gm_search_map`
 - Commented-out `FileTranslatorHandler` implementation in `translator::rml`

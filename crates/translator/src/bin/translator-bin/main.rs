@@ -2,7 +2,6 @@
 mod cli;
 
 use std::io;
-use std::io::BufRead;
 use std::path::PathBuf;
 
 use common::logger::init_logger;
@@ -60,11 +59,8 @@ pub fn main() -> Result<(), PlanError> {
             process_one_file(input_path.to_path_buf(), Some(output_prefix), json_only, pretty_print);
         }
     } else if let Some(_stdin_matches) = matches.subcommand_matches("stdin") {
-        let mut mapping = String::new();
-        let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            mapping = String::from(mapping + line.unwrap().clone().as_str());
-        }
+        let mapping = io::read_to_string(io::stdin())
+            .map_err(|err| PlanError::GenericError(err.to_string()))?;
 
         debug!("Attempting to translate from stdin");
         let out_option = process_one_str(mapping.as_str());

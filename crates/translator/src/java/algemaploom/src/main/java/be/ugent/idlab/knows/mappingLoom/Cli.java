@@ -28,10 +28,9 @@ class Cli {
 
         /* Translate */
         try {
-            String line;
-            while ((line = in.readLine()) != null) {
-                mapping = mapping.concat(line);
-            }
+            StringWriter content = new StringWriter();
+            in.transferTo(content);
+            mapping = content.toString();
         } catch (IOException e) {
             System.err.println("Reading mapping failed: " + e);
             System.exit(READING_ERROR);

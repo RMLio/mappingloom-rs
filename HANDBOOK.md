@@ -32,7 +32,8 @@ the plan.
   placeholder (`unimplemented!`). The `normalizer` crate has an example CLI,
   `cli_normalizer`.
 - Tests: Rust unit and regression tests inside the crates (`#[test]`), with
-  test resources under each crate's `resources/` directory; the Java binding
+  test resources under each crate's `resources/` directory; tests that run
+  `translator-bin` itself are in `crates/translator/tests/`; the Java binding
   has Maven tests under `crates/translator/src/java/algemaploom`.
 - The project keeps a `README.md` (usage, covered specs, bindings) and a
   `CHANGELOG.md` in Keep a Changelog format.
@@ -106,7 +107,9 @@ other mapping parts in the store (extend, join, serializer).
 
 The CLI writes the plan next to the input (or with the derived output prefix)
 as DOT and JSON; `-j` limits output to JSON. `stdin` prints the JSON plan to
-standard output.
+standard output. The Java binding's `Cli` does the same for a file argument or
+standard input. Both read the mapping as a whole, line breaks included, because
+a Turtle comment ends at the end of its line.
 
 ## Build, format and test
 
