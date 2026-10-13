@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `translator-bin stdin` and the Java binding's `Cli` read the mapping with its line breaks, so a Turtle comment ends at its line.
 - `translator_new_rml`: the serializer assigns graphs per predicate-object map (the subject map's graphs plus its own, the default graph when there are none), so a graph map of one predicate-object map no longer moves the triples of the others.
+- `translator_new_rml`: a predicate-object map with several `rml:objectMap` or `rml:object` values keeps all of them in the plan.
 
 ### Removed
 - `SearchStore` fields and methods that nothing used: `reference_attr_map`, `add_reference_name`, `abs_ls_search_map`, `pm_search_map`, `om_search_map` and `gm_search_map`

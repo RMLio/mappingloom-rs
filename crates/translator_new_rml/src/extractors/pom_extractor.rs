@@ -2,7 +2,7 @@ use log::debug;
 use sophia_api::term::Term;
 
 use super::error::ParseError;
-use super::store::{get_object, get_object_with_ps};
+use super::store::{get_object_with_ps, get_objects_with_ps};
 use super::{Extractor, FromVocab, TermMapExtractor};
 use crate::extractors::store::get_subject;
 use crate::rml_model::v2::core::expression_map::term_map::{
@@ -34,12 +34,8 @@ impl Extractor<PredicateObjectMap> for PredicateObjectMap {
         let mut object_pred_vec = ObjectMap::get_shortcut_preds();
         object_pred_vec.append(&mut ObjectMap::get_map_preds());
 
-        let object_terms: Vec<_> = object_pred_vec
-            .iter()
-            .filter_map(|pred| {
-                get_object(graph_ref, subject_ref.borrow_term(), pred).ok()
-            })
-            .collect();
+        let object_terms: Vec<_> =
+            get_objects_with_ps(graph_ref, subject_ref.borrow_term(), &object_pred_vec);
 
         if object_terms.is_empty() {
             return Err(ParseError::NoTermMapFoundError(format!(

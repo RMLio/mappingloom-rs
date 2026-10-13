@@ -303,4 +303,102 @@ mod tests {
             ]
         );
     }
+
+    /// The sorted serializer template lines of a triples map with one
+    /// predicate-object map, and optional extra subject map content.
+    fn one_pom_lines(subject_map_extra: &str, pom: &str) -> Vec<String> {
+        let mapping = format!(
+            r#"@prefix ex: <http://example.com/> .
+@prefix rml: <http://w3id.org/rml/> .
+ex:TM a rml:TriplesMap;
+  rml:logicalSource [ rml:iterator "$.s[*]"; rml:referenceFormulation rml:JSONPath;
+      rml:source [ a rml:RelativePathSource;
+          rml:root rml:MappingDirectory; rml:path "s.json" ] ];
+  rml:subjectMap [ rml:template "http://example.com/{{$.ID}}" {} ];
+  rml:predicateObjectMap [ {} ] ."#,
+            subject_map_extra, pom
+        );
+        plan_template_lines(&mapping)
+    }
+
+    #[test]
+    fn pom_with_several_object_maps_keeps_each() {
+        assert_eq!(
+            one_pom_lines(
+                "",
+                r#"rml:predicate ex:p;
+      rml:objectMap [ rml:constant "A" ];
+      rml:objectMap [ rml:constant "B" ]"#
+            ),
+            [
+                r#"?sm_0 <http://example.com/p> "A" ."#,
+                r#"?sm_0 <http://example.com/p> "B" ."#,
+            ]
+        );
+    }
+
+    #[test]
+    fn pom_with_object_shortcuts_and_object_maps_keeps_each() {
+        assert_eq!(
+            one_pom_lines(
+                "",
+                r#"rml:predicate ex:p;
+      rml:object "A"; rml:object "B";
+      rml:objectMap [ rml:constant "C" ];
+      rml:objectMap [ rml:constant "D" ]"#
+            ),
+            [
+                r#"?sm_0 <http://example.com/p> "A" ."#,
+                r#"?sm_0 <http://example.com/p> "B" ."#,
+                r#"?sm_0 <http://example.com/p> "C" ."#,
+                r#"?sm_0 <http://example.com/p> "D" ."#,
+            ]
+        );
+    }
+
+    #[test]
+    fn pom_with_several_predicate_maps_keeps_each() {
+        assert_eq!(
+            one_pom_lines(
+                "",
+                r#"rml:predicateMap [ rml:constant ex:p1 ];
+      rml:predicateMap [ rml:constant ex:p2 ];
+      rml:objectMap [ rml:constant "A" ]"#
+            ),
+            [
+                r#"?sm_0 <http://example.com/p1> "A" ."#,
+                r#"?sm_0 <http://example.com/p2> "A" ."#,
+            ]
+        );
+    }
+
+    #[test]
+    fn pom_with_several_graph_maps_keeps_each() {
+        assert_eq!(
+            one_pom_lines(
+                "",
+                r#"rml:predicate ex:p; rml:objectMap [ rml:constant "A" ];
+      rml:graphMap [ rml:constant ex:G1 ];
+      rml:graphMap [ rml:constant ex:G2 ]"#
+            ),
+            [
+                r#"?sm_0 <http://example.com/p> "A" <http://example.com/G1> ."#,
+                r#"?sm_0 <http://example.com/p> "A" <http://example.com/G2> ."#,
+            ]
+        );
+    }
+
+    #[test]
+    fn subject_map_with_several_graph_maps_keeps_each() {
+        assert_eq!(
+            one_pom_lines(
+                "; rml:graphMap [ rml:constant ex:SG1 ], [ rml:constant ex:SG2 ]",
+                r#"rml:predicate ex:p; rml:objectMap [ rml:constant "A" ]"#
+            ),
+            [
+                r#"?sm_0 <http://example.com/p> "A" <http://example.com/SG1> ."#,
+                r#"?sm_0 <http://example.com/p> "A" <http://example.com/SG2> ."#,
+            ]
+        );
+    }
 }
