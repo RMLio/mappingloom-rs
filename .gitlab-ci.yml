@@ -30,6 +30,46 @@ test-java:
     - rustup target add aarch64-apple-darwin
     - ./test_java.sh
 
+# The kg-construct conformance suites, run by MappingWeaver with this
+# translator (HANDBOOK: Conformance). Started by hand. MAPPINGWEAVER_REF picks
+# the MappingWeaver branch or tag; MTR_VERSION, MTR_JOBS and the other variables
+# of its conformance/run.sh apply as well.
+conformance:
+  image: rust:latest
+  stage: test
+  needs: []
+  when: manual
+  services:
+    - name: docker:29-dind
+      command: [ "--tls=false" ]
+  variables:
+    DOCKER_HOST: "tcp://docker:2375"
+    DOCKER_TLS_CERTDIR: ""
+    MAPPINGWEAVER_REF: development
+    MTR_UNEXPECTED_PASS: warn
+    MTR_CACHE: "$CI_PROJECT_DIR/.mtr-cache"
+  cache:
+    key: conformance
+    paths:
+      - .mtr-cache
+  script:
+    - apt-get update
+    - apt-get install -y openjdk-21-jdk-headless maven gcc-mingw-w64
+    - rustup target add x86_64-unknown-linux-gnu
+    - rustup target add x86_64-pc-windows-gnu
+    - ./build_java.sh
+    - MAPPINGLOOM_VERSION=$(mvn -q -f crates/translator/src/java/algemaploom/pom.xml help:evaluate -Dexpression=project.version -DforceStdout)
+    - git clone --depth 1 --branch "$MAPPINGWEAVER_REF" https://github.com/RMLio/MappingWeaver-java.git mappingweaver
+    - bash mappingweaver/conformance/run.sh -Dmappingloom.version=$MAPPINGLOOM_VERSION
+  artifacts:
+    when: always
+    paths:
+      - mappingweaver/target/conformance/report.json
+      - mappingweaver/target/conformance/report.md
+      - mappingweaver/target/conformance/mtr-run/*/*.log
+    reports:
+      junit: mappingweaver/target/conformance/junit.xml
+
 # Builds
 build-rust:
   image: rust:latest

@@ -1,4 +1,4 @@
-use crate::translator::regression_tests::TestExecutor;
+use crate::translator::plan_snapshots::TestExecutor;
 use std::error::Error;
 
 const TEST_DIR: &str = "rml-lv-tests";

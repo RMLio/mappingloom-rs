@@ -1,3 +1,10 @@
+//! Plan snapshots: each test translates the `mapping.ttl` of a kg-construct
+//! test case and compares the plan with the recorded `mapping.json`. They
+//! detect changes to the plan; they check neither the plan's correctness nor
+//! conformance, which the conformance run of MappingWeaver checks (HANDBOOK,
+//! Test resources). The comparison hashes the sorted characters of the plan
+//! JSON, so it is blind to any change that keeps the same characters.
+
 mod cc;
 mod core;
 mod fnml;

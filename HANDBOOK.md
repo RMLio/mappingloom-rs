@@ -10,8 +10,9 @@ Written for a CS student who wants to understand MappingLoom as code.
 4. [How a mapping becomes a plan](#how-a-mapping-becomes-a-plan)
 5. [Build, format and test](#build-format-and-test)
 6. [Test resources](#test-resources)
-7. [Language bindings](#language-bindings)
-8. [Release process](#release-process)
+7. [Conformance](#conformance)
+8. [Language bindings](#language-bindings)
+9. [Release process](#release-process)
 
 ## Preface
 
@@ -31,7 +32,7 @@ the plan.
   and `-p` (pretty-print). It also declares `sparql-rml-pruner`, which is a
   placeholder (`unimplemented!`). The `normalizer` crate has an example CLI,
   `cli_normalizer`.
-- Tests: Rust unit and regression tests inside the crates (`#[test]`), with
+- Tests: Rust unit tests and plan snapshots inside the crates (`#[test]`), with
   test resources under each crate's `resources/` directory; tests that run
   `translator-bin` itself are in `crates/translator/tests/`; the Java binding
   has Maven tests under `crates/translator/src/java/algemaploom`.
@@ -136,7 +137,8 @@ CI (`.gitlab-ci.yml`) runs the stages lint, build, test and deploy. The lint
 stage comes from the included `rml/util/ci-templates` `CHANGELOG.gitlab-ci.yml`
 template, which checks that `CHANGELOG.md` is updated. The build stage builds
 Rust and the Java, Python and Node.js bindings; the test stage runs the Rust
-workspace tests and the Java tests.
+workspace tests and the Java tests, and holds the manual `conformance` job
+(see Conformance).
 
 Commit messages follow the conventional `type (scope): subject` format
 described in `.cmt` (types feat, fix, docs, style, refactor, test, chore).
@@ -145,29 +147,62 @@ a commit formatting tool that prompts for these parts.
 
 ## Test resources
 
-`translator_new_rml` carries the regression suite against the official RML
-conformance test cases. `resources/test/` has one directory per spec module
+`translator_new_rml` carries plan snapshots of the kg-construct conformance
+test cases. `resources/test/` has one directory per spec module
 (`rml-core-tests`, `rml-lv-tests`, `rml-io-tests`, `rml-cc-tests`,
 `rml-fnml-tests`, `rml-star-tests`, plus `rml-lv-fnml` and `rmlstar`), and
 inside it one directory per test case (e.g. `RMLTC0000-JSON/`) holding the
 test case files (`mapping.ttl`, input data, `output.nq`, `README.md`) and the
-expected plan `mapping.json`.
+recorded plan `mapping.json`.
 
-The tests live in `src/translator/regression_tests/` (one file per module:
-`core.rs`, `logical_view.rs`, `io.rs`, `cc.rs`, `fnml.rs`, `star.rs`,
+The snapshot tests live in `src/translator/plan_snapshots/` (one file per
+module: `core.rs`, `logical_view.rs`, `io.rs`, `cc.rs`, `fnml.rs`, `star.rs`,
 `rml_lv_fnml.rs`). Each test calls
 `TestExecutor::new(<module dir>).execute(<case>, <positive>)`: a positive case
 translates `mapping.ttl` and compares the plan with `mapping.json`; a negative
 case expects the translation to fail. The comparison hashes the sorted
 characters of the re-serialized JSON, so it is independent of key order and of
-the order of strings inside templates. The `mapping.json` files are fixtures:
-a change to one goes through the maintainer as stated in the contract.
+the order of strings inside templates, which `translator_new_rml` varies
+between runs; it is also blind to any change that keeps the same characters.
+
+A snapshot records what the translator emitted when it was taken, so a
+passing snapshot test says that the plan did not change, never that the plan
+is right. Whether a plan is right is decided by running it: the conformance
+run of MappingWeaver on the kg-construct suites (see Conformance). The
+`mapping.json` files are fixtures: a change to one goes through the maintainer
+as stated in the contract, with the reason the plan changed.
 
 `translator_rml/resources/` holds RML v1 test mappings (`csv-testcases/`,
 `rml/`, `rmlmapper-custom/`, `rmlstreamer/`), and `translator_shexml/resources/test/`
 holds ShExML inputs. Each translator crate has a `test_case!` macro that
 resolves a file name against its `resources/` directory via
 `CARGO_MANIFEST_DIR`.
+
+## Conformance
+
+A plan is right when executing it gives the RDF that the specification
+requires, so conformance is measured on an engine: MappingWeaver, which
+executes the plans of this translator. MappingWeaver's
+`conformance/run.sh` runs the kg-construct test suites with
+mapping-test-runner on its jar, and compares the outcome of every case with
+its `conformance/expected-results.csv` (MappingWeaver's HANDBOOK, Conformance).
+
+The manual `conformance` CI job runs that script with this translator: it
+builds and installs the Java binding (`build_java.sh`), clones MappingWeaver
+from its GitHub mirror at `MAPPINGWEAVER_REF` (default `development`), builds
+it with `-Dmappingloom.version=<the binding's version>`, and runs the suites,
+with the database cases on Docker-in-Docker. A case that does worse than
+MappingWeaver's expectations is a regression and fails the job; a case that
+does better is reported as a warning (`MTR_UNEXPECTED_PASS=warn`), since the
+expectations belong to MappingWeaver: the fix that makes it pass also removes
+its line there, in a MappingWeaver change that follows this translator's
+release. The job keeps the reports (`report.md`, JUnit XML) and the engine
+logs of each case.
+
+Run it for a change that affects the plans of RML-KGC mappings, and put the
+cases whose outcome changed in the merge request. Locally, the same run is
+`./build_java.sh`, then `conformance/run.sh -Dmappingloom.version=<version>`
+in a MappingWeaver checkout.
 
 ## Language bindings
 

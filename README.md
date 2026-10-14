@@ -74,19 +74,21 @@ python version >= 3.10 and the following packages:
 
 
 ### RML 
-The translator is tested against the official RML conformance
-[test cases](https://github.com/kg-construct/rml-test-cases) with regression tests
-that compare the generated mapping plan for each case against a stored plan.
-The following specifications are covered: RML-Core, RML-LV (logical views),
-RML-IO, RML-CC (collections & containers), RML-FNML (functions) and
-RML-STAR (RDF-star).
+The translator keeps a plan snapshot of each official RML conformance
+[test case](https://github.com/kg-construct) it covers: a test translates the
+case's mapping and compares the plan with the stored one, so a change in the
+plan shows up. The following specifications are covered: RML-Core, RML-LV
+(logical views), RML-IO, RML-CC (collections & containers), RML-FNML
+(functions) and RML-STAR (RDF-star). Whether the plans are right is checked by
+running them in MappingWeaver on the conformance suites (the `conformance` CI
+job, see [HANDBOOK.md](HANDBOOK.md#conformance)).
 
-The test cases and their generated mapping plans live under
+The test cases and their plan snapshots live under
 [crates/translator_new_rml/resources/test](/crates/translator_new_rml/resources/test),
 one directory per spec module (`rml-core-tests`, `rml-lv-tests`, `rml-io-tests`,
-`rml-cc-tests`, `rml-fnml-tests`, `rml-star-tests`). The regression tests
+`rml-cc-tests`, `rml-fnml-tests`, `rml-star-tests`). The snapshot tests
 themselves are in
-[crates/translator_new_rml/src/translator/regression_tests](/crates/translator_new_rml/src/translator/regression_tests).
+[crates/translator_new_rml/src/translator/plan_snapshots](/crates/translator_new_rml/src/translator/plan_snapshots).
 
 ### ShExML
 The translator can *partially* translate ShExML documents. 

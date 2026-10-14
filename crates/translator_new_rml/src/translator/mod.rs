@@ -5,7 +5,7 @@ mod serializer;
 mod source;
 mod store;
 #[cfg(test)]
-pub mod regression_tests;
+pub mod plan_snapshots;
 
 use std::cell::RefMut;
 use std::path::Path;
