@@ -8,11 +8,12 @@ Written for a CS student who wants to understand MappingLoom as code.
 2. [Agent request contract (for AI agents/LLMs)](#agent-request-contract-for-ai-agentsllms)
 3. [Workspace layout](#workspace-layout)
 4. [How a mapping becomes a plan](#how-a-mapping-becomes-a-plan)
-5. [Build, format and test](#build-format-and-test)
-6. [Test resources](#test-resources)
-7. [Conformance](#conformance)
-8. [Language bindings](#language-bindings)
-9. [Release process](#release-process)
+5. [The canonical pipeline](#the-canonical-pipeline)
+6. [Build, format and test](#build-format-and-test)
+7. [Test resources](#test-resources)
+8. [Conformance](#conformance)
+9. [Language bindings](#language-bindings)
+10. [Release process](#release-process)
 
 ## Preface
 
@@ -41,26 +42,28 @@ the plan.
 
 ## Agent request contract (for AI agents/LLMs)
 
-<!-- software-handbook contract: 2026-10-13 -->
+<!-- software-handbook contract: 2026-10-27 -->
 
 Every implementation request handled by an AI agent/LLM follows these constraints:
 
 - If the request is a feature or bugfix:
   - fix the specific failing case or issue named in the request;
   - preserve existing passing behavior unless explicitly asked not to;
-  - add or update a regression test when needed.
+  - cover the change with a test: extend an existing test where one fits, add one only where none does, and remove the tests of removed or deprecated behavior.
 - Leave staging and committing to the maintainer. Edit staged files freely: the maintainer stages what they reviewed, so the unstaged diff shows the new changes.
-- Make the smallest coherent patch. A documentation error found along the way is fixed in the same patch.
+- Make one coherent patch per request: everything the request needs (code, tests, docs, changelog) and nothing unrelated. A documentation error found along the way is fixed in the same patch.
 - Leave the code leaner after every request: remove what the change makes redundant (duplicate tests, parameters and options that no longer do anything, helpers that duplicate each other, comments that only repeat the code), and reuse shared functionality instead of adding a local variant. Run `cargo clippy --workspace` to find unused code.
 - Fix a transient environment problem (a stale PATH, a shell or editor that needs a restart) in the environment, by restarting or reconfiguring it; add no code that works around it.
 - **Push back** when a request would violate an established principle (e.g. breaking test hermeticity). Explain the principle and suggest a documentation-only fix instead of silently implementing the harmful change.
-- Update this handbook so the change is documented as well as implemented.
-  - Document only the latest state, integrated in the surrounding narrative (principles, behavior, rationale), including the choices made and why.
+- Keep necessary internal implementation guidance and rationale in this handbook; put end-user and developer-facing setup, usage and workflows in the README. Give each fact one home in the repo and cross-reference rather than duplicate it. Code and docs stand on their own: they reference published sources (such as specifications) and no planning notes or files outside the repo.
+  - Update only the documentation affected by the change, integrated into the relevant existing section.
   - This contract holds only general rules for handling a request; project-specific guidance goes in the chapter on that topic.
-- Do not stop at making tests green; align the implementation with the specification or intended design, and document the semantic reason in this handbook.
-- Update existing tests (code or fixtures) in the same patch when the change requires it, and list each update with its reason in the hand-over; the maintainer reviews them before staging. Never weaken a test only to make it pass.
+- Do not stop at making tests green; align the implementation with the specification or intended design, and document necessary semantic rationale in this handbook.
+- Update existing tests (code or fixtures) in the same patch when the change requires it, and list each update with its reason in the hand-over. Never weaken a test only to make it pass.
 - Update `CHANGELOG.md` for every change, internal ones included (tests, CI, refactoring, removed code): keep `## Unreleased` a short summary of what changed since the last release. A feature that is new since the last release is one Added line, which later fixes update instead of getting lines of their own. Each line covers one concern; changes of the same concern share a line (such as editorial changes, or updated dependency versions). A line states what is true now, without the old behavior; a fix that only removes a divergence that should not have existed (one part behaving unlike the rest) gets a few words in the line of its concern at most.
-- Before a release, propose a review of everything changed since the previous release: the code for correctness, and the documentation and changelog for accuracy and brevity.
+- Before handing over, review the patch as the maintainer would (correctness, leaner code and docs, changelog) and fix what you find, so the maintainer's review is the last round.
+- Before a release, review everything changed since the previous release (the code for correctness, the documentation and changelog for accuracy and brevity), check the dependencies (undeclared, outdated, vulnerable), and list the open items that change the released artifact, so they ship in this release.
+- Hand over in one short message: what is ready (with a commit message), what needs the maintainer's judgement (each non-obvious removal or changed test, with its evidence), what was verified (commands and results), and the maintainer's next actions in order. Details belong in the changelog and docs.
 - Check whether `README.md` needs updates for user-visible behavior or workflow changes, and update it when needed.
 - Write documentation (this handbook, READMEs, `TODO.md`, `CHANGELOG.md`, code comments) as plain positive statements: say what is true and leave out the contrast ("X, not Y"). Keep a negative only when it is the point itself, such as a prohibition, a warning, or a known limitation.
 - If there are difficulties during fulfillment, document them in the most appropriate existing handbook location (create a new chapter only when truly necessary) so future requests start with better context.
@@ -82,8 +85,10 @@ All crates live under `crates/` and are workspace members (`members = ["crates/*
 | `translator_shexml` | Translator for ShExML (parser combinators in `parcombi/`), with a best-effort translation of unsupported features. |
 | `translator` | The front end: the CLI binaries, the `api` module (`process_one_file`, `process_one_str`) and the Java/Python/Node.js bindings. |
 | `common` | Shared utilities such as the logger. |
-| `normalizer` | Normalizes an RML document with SPARQL queries over an Oxigraph store. |
+| `normalizer` | Normalizes a mapping with SPARQL Update rules over an Oxigraph store: the RML-KGC rule set of the canonical pipeline, and the paper's RML.io rule set (see The canonical pipeline). |
 | `translator_normalized_rml` | Translator for normalized RML documents. |
+| `algemaploom-plan` | The plans of the canonical pipeline: the IR's operators and functions, the plan document and its JSON Schema (see The canonical pipeline). |
+| `pipeline-test` | Test harness of the canonical pipeline: graph cases for normalizer rules, and plan snapshots validated against the plan schema. A dev-dependency only. |
 | `sparql-sat-checker` | Checks SPARQL/triples-map satisfiability on plans; uses `translator_normalized_rml`. It carries its own version (`0.1.0`) and edition 2024. Unmaintained and kept for reference: nothing calls it, and its crate documentation lists its known defects. |
 
 ## How a mapping becomes a plan
@@ -121,7 +126,86 @@ standard output. The Java binding's `Cli` does the same for a file argument or
 standard input. Both read the mapping as a whole, line breaks included, because
 a Turtle comment ends at the end of its line.
 
+## The canonical pipeline
+
+The canonical pipeline replaces `translator_new_rml` for RML-KGC in three
+stages: normalize, translate, optimize. It is built next to the legacy
+translators and nothing calls it yet. Its normalizer follows the normal form
+of Min & Hartig (Appendix A), adapted to RML-KGC.
+
+**Normalizer.** `normalizer::normalize_kgc(mapping, base_iri)` applies the
+rules of `kgc::RULES` in order and returns a `NormalForm`: the normalized
+graph, and the skolem IRI of each blank node of the original document. Each
+rule is one SPARQL Update request, except `same-source-joins`, which compares
+logical sources by value recursively, something SPARQL can't do to any
+depth. A rule whose id starts with a number is that step of the paper. The
+rules, in order:
+
+| Rule | What it does |
+|---|---|
+| `2-constant-shortcuts`, `datatype-and-language-shortcuts`, `join-condition-shortcuts` | expand the shortcuts: `rml:subject`, `rml:predicate`, `rml:object`, `rml:graph`, `rml:datatype`, `rml:language`, `rml:child`, `rml:parent` |
+| `term-types` | make every term type explicit: IRI, or Literal for an object map that is reference-valued, function-valued or has a datatype or language map; a constant keeps none |
+| `1-classes` | each class of a subject map becomes a predicate-object map |
+| `same-source-joins` | a referencing object map without join condition over an effectively equal logical source takes the parent subject map's expression and term type |
+| `3-split-predicate-object-maps` | one predicate-object map per predicate map, object map and graph map, the subject map's graph maps included |
+| `subject-graph-maps` | removes the subject map's graph maps, which `3-split-predicate-object-maps` gave every predicate-object map |
+| `base-iris` | every triples map gets an `rml:baseIRI`, by default the processor's |
+| `5-split-triples-maps` | one triples map per predicate-object map; the original keeps its logical source and subject map for the joins that name it |
+
+`3-split-predicate-object-maps` takes the subject map's graph maps per
+triples map, so a predicate-object map that two triples maps share gets the
+graphs of each one only, and it removes the predicate-object maps it splits.
+`same-source-joins` inlines an object map only when every triples map that
+uses it reads a logical source equal to its parent's: the same node, or one
+whose description is equal ignoring `rdf:type`. It links equal sources with
+`nf:sameSource` while it runs and removes the links before it ends. A
+normalized triples map is a node with one `rml:predicateObjectMap`; a
+triples map without one produces no triples, and stays for the joins that
+name it as parent.
+
+The rules add links in the namespace `NF`
+(`https://w3id.org/imec/knows/ns/rml/normal-form#`), which only the
+pipeline reads:
+- `nf:origin` links a node that a rule creates to the node of the original
+  document it stands for: a copy to its original, a shortcut's term map to
+  the node that held the shortcut, a class's predicate-object map to its
+  subject map. A copy of a created node links to the original node, so one
+  hop always reaches the original document. A blank node of the original
+  document is named by its skolem IRI in `GENID`
+  (`https://github.com/RMLio/algemaploom-rs/.well-known/genid/`), from its
+  canonical label (RDFC-1.0), so the IRI depends on the document alone and
+  means the same in every file and plan. The skolem IRI carries the blank
+  node's label as `nf:label`, for reading only; an anonymous node's label is
+  the parser's random id, so a test case labels every blank node that an
+  `nf:origin` link names.
+- `nf:parentTriplesMap` marks an object map that `same-source-joins`
+  inlined, so it is evaluated as its parent's subject map: with the parent's
+  base IRI and the parent's fresh blank nodes.
+
+The processor's base IRI enters the store as `nf:processor rml:baseIRI <…>`
+for `base-iris`, and leaves it after the last rule. The RML.io rule set
+(`normalize_rml_str`, `normalize_rml_path`, the `cli_normalizer` example)
+stays as it is for when RML.io is taken up.
+
+**Plans.** The `algemaploom-plan` crate holds the core of the plans: a
+`Plan` is a petgraph graph of `Operator`s that the builder adds without
+fusing anything, and `Plan::document` gives the `PlanDocument` that travels
+to an engine, with its `version` and `producer`, and edges that name their
+nodes by id. The plans name no mapping language: an Extend binds attributes
+to `Expression`s (references, templates, constants and term constructors), a
+quad pattern without graph goes to the default graph, and an origin is the
+list of IRIs of the mapping nodes an element comes from (skolem IRIs for
+blank nodes), for provenance only. A translator expresses its language's
+semantics in these terms. `VERSION` is the schema's version, `MAJOR.MINOR`,
+independent of the crate version: a new operator, expression or optional
+field is a minor bump. `schema()` generates the JSON Schema from the types
+(`schemars`, which follows their serde attributes), and
+`schema/plan.schema.json` is that schema, committed. An optional field
+carries `#[serde(default, skip_serializing_if = …)]`, since schemars marks a
+field without `default` as required.
+
 ## Build, format and test
+
 
 - Build: `cargo build` (CI) or `cargo build --release` for the CLI in
   `target/release/translator-bin`.
@@ -172,6 +256,21 @@ run of MappingWeaver on the kg-construct suites (see Conformance). The
 `mapping.json` files are fixtures: a change to one goes through the maintainer
 as stated in the contract, with the reason the plan changed.
 
+The canonical pipeline's tests use the `pipeline-test` harness:
+- A normalizer rule has its cases in `normalizer/resources/test/kgc/<rule
+  id>/`: a case is a folder with `input.ttl` and `expected.ttl`, and a rule
+  with several cases has one subfolder per case. The rule's test applies the
+  rule alone to the input and compares the result with the expected graph
+  by isomorphism; `kgc/rule-set/` runs the whole rule set. The Turtle inlines
+  every blank node it can, and labels only those that are named more than
+  once or by an `nf:origin` link, whose `nf:label` is that label.
+- A plan snapshot (`assert_plan_snapshot`) is the plan document as JSON
+  without `version` and `producer`, compared as JSON, after the whole
+  document is validated against the plan schema. `UPDATE_SNAPSHOTS=1`
+  rewrites the snapshots, and `UPDATE_SCHEMA=1 cargo test -p
+  algemaploom-plan` rewrites the committed schema; review either diff as a
+  fixture change.
+
 `translator_rml/resources/` holds RML v1 test mappings (`csv-testcases/`,
 `rml/`, `rmlmapper-custom/`, `rmlstreamer/`), and `translator_shexml/resources/test/`
 holds ShExML inputs. Each translator crate has a `test_case!` macro that
@@ -212,7 +311,8 @@ code lives in `crates/translator/src/java/` (Maven project `algemaploom`),
 `crates/translator/src/python/` and `crates/translator/src/nodejs/`. The
 scripts `build_java.sh`, `build_python.sh` and `build_nodejs.sh` build each
 binding; the Java build cross-compiles for Linux, Windows (MinGW) and macOS
-targets.
+targets. The Java jar also carries the plan schema, as
+`algemaploom-plan/plan.schema.json`, for consumers that validate plans.
 
 ## Release process
 

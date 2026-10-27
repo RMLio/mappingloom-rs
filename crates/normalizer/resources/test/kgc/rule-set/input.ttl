@@ -1,0 +1,23 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix ex: <http://example.com/> .
+
+# A class and a graph on the subject map, and a referencing object map
+# without join condition over an effectively equal logical source. The
+# blank nodes that nf:origin links name keep their labels.
+ex:TM1 a rml:TriplesMap ;
+  rml:logicalSource [
+      rml:referenceFormulation rml:JSONPath ; rml:iterator "$[*]" ;
+      rml:source [ rml:root rml:MappingDirectory ; rml:path "s.json" ]
+    ] ;
+  rml:subjectMap _:sm1 ;
+  rml:predicateObjectMap _:pom1 .
+_:sm1 rml:template "s/{ID}" ; rml:class ex:Student ; rml:graph ex:G .
+_:pom1 rml:predicate ex:sport ;
+  rml:objectMap [ rml:parentTriplesMap ex:TM2 ] .
+
+ex:TM2 a rml:TriplesMap ;
+  rml:logicalSource [
+      rml:referenceFormulation rml:JSONPath ; rml:iterator "$[*]" ;
+      rml:source [ rml:root rml:MappingDirectory ; rml:path "s.json" ]
+    ] ;
+  rml:subjectMap [ rml:template "sport/{Sport}" ] .

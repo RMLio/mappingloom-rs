@@ -67,6 +67,16 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- The plan schema, for consumers that validate plans -->
+            <resource>
+                <directory>../../../../algemaploom-plan/schema</directory>
+                <targetPath>algemaploom-plan</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <!-- Default maven build lifecycle plugins -->
             <plugin>

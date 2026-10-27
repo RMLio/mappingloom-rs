@@ -1,0 +1,11 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+# 3-split-predicate-object-maps gave every predicate-object map the graph
+# maps of its subject map, so the subject map needs them no more.
+ex:TM rml:subjectMap [ rml:template "s/{a}" ; rml:graphMap ex:G ] ;
+  rml:predicateObjectMap [
+      rml:predicateMap ex:P ; rml:objectMap ex:O ; rml:graphMap ex:G
+    ] .

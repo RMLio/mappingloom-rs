@@ -1,0 +1,13 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+# Descriptions with cycles of blank nodes are compared to any depth.
+ex:TM1 rml:logicalSource [ ex:p _:a ] ;
+  rml:predicateObjectMap [ rml:objectMap ex:ROM ] .
+_:a ex:p _:a ; ex:q _:a .
+ex:ROM rml:parentTriplesMap ex:TM2 .
+ex:TM2 rml:logicalSource [ ex:p _:b ] ;
+  rml:subjectMap [ rml:reference "x" ] .
+_:b ex:p _:b ; ex:q _:b .

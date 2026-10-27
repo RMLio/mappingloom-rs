@@ -1,0 +1,11 @@
+[package]
+name = "pipeline-test"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+algemaploom-plan = { path = "../algemaploom-plan/" }
+jsonschema = { version = "0.60.1", default-features = false }
+oxigraph = { version = "0.5.7", default-features = false }
+serde_json.workspace = true

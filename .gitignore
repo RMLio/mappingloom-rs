@@ -6,6 +6,8 @@ output/
 
 *.dot
 *.json
+!crates/algemaploom-plan/schema/*.json
+!crates/pipeline-test/tests/resources/*.json
 
 test_resources/
 

@@ -1,0 +1,8 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+ex:TM a rml:TriplesMap ; rml:logicalSource ex:LS ; rml:subjectMap ex:SM ;
+  rml:baseIRI <http://example.com/base/> ;
+  rml:predicateObjectMap ex:POM1, ex:POM2 .

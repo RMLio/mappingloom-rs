@@ -1,0 +1,16 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+ex:TM rml:subjectMap ex:SM ;
+  rml:predicateObjectMap [
+      rml:predicateMap [ rml:constant rdf:type ; nf:origin ex:SM ] ;
+      rml:objectMap [ rml:constant ex:A ; nf:origin ex:SM ] ;
+      nf:origin ex:SM
+    ], [
+      rml:predicateMap [ rml:constant rdf:type ; nf:origin ex:SM ] ;
+      rml:objectMap [ rml:constant ex:B ; nf:origin ex:SM ] ;
+      nf:origin ex:SM
+    ] .
+ex:SM rml:template "s/{a}" .

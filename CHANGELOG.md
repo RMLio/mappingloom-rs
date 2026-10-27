@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Release tooling: `RELEASE.md` documents the steps; `bump-version.sh` checks the version format.
 - Manual `conformance` CI job: MappingWeaver, built with this translator, runs the kg-construct test suites; a regression against MappingWeaver's expected results fails it (see HANDBOOK: Conformance).
+- `algemaploom-plan` crate: the plans of the canonical pipeline, independent of any mapping language, serialized with a schema version and producer, and their JSON Schema in `schema/plan.schema.json`, which the Java jar also ships (see HANDBOOK: The canonical pipeline).
+- `normalizer`: the RML-KGC core rule set, `normalize_kgc`, with links from the normal form to the original document (`nf:origin`), which name its blank nodes by skolem IRIs from their canonical labels.
+- `pipeline-test` crate: test harness of the canonical pipeline, with graph cases for normalizer rules and plan snapshots validated against the plan schema.
 
 ### Changed
 - Java lib: don't build fat jar.
@@ -26,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - `SearchStore` fields and methods that nothing used: `reference_attr_map`, `add_reference_name`, `abs_ls_search_map`, `pm_search_map`, `om_search_map` and `gm_search_map`
 - Commented-out `FileTranslatorHandler` implementation in `translator::rml`
+- `normalizer.py`, a Python copy of the RML.io rule set
 - `architecture/README.md`, a future-work note on the crate split, and the unused `websocket_example.ttl`
 
 ## [0.8.0] - 2026-08-19

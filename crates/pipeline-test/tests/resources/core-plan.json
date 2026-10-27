@@ -1,0 +1,153 @@
+{
+  "edges": [
+    {
+      "from": "Source_0",
+      "to": "Extend_1"
+    },
+    {
+      "from": "Extend_1",
+      "to": "Project_2"
+    },
+    {
+      "from": "Project_2",
+      "to": "Serializer_3"
+    },
+    {
+      "from": "Serializer_3",
+      "to": "Target_4"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "Source_0",
+      "operator": {
+        "config": {
+          "access": {
+            "path": "student.json",
+            "root": "MappingDirectory",
+            "type": "File"
+          },
+          "fields": [
+            {
+              "attribute": "name",
+              "reference": "$.Name",
+              "single_valued": true
+            }
+          ],
+          "iterator": "$.students[*]",
+          "query_language": "http://w3id.org/rml/JSONPath"
+        },
+        "type": "SourceOp"
+      },
+      "origin": [
+        "http://example.com/base/ls"
+      ]
+    },
+    {
+      "id": "Extend_1",
+      "operator": {
+        "config": {
+          "pairs": [
+            {
+              "attribute": "s",
+              "expression": {
+                "base": "http://example.com/base/",
+                "inner": {
+                  "encoding": "IriSafe",
+                  "pieces": [
+                    {
+                      "text": "http://example.com/"
+                    },
+                    {
+                      "attribute": "name"
+                    }
+                  ],
+                  "type": "Template"
+                },
+                "kind": "Iri",
+                "type": "Iri"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "http://example.com/base/sm"
+              ]
+            },
+            {
+              "attribute": "o",
+              "expression": {
+                "inner": {
+                  "attribute": "name",
+                  "type": "Reference"
+                },
+                "type": "Literal"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "http://example.com/base/om"
+              ]
+            }
+          ]
+        },
+        "type": "ExtendOp"
+      }
+    },
+    {
+      "id": "Project_2",
+      "operator": {
+        "config": {
+          "attributes": [
+            "s",
+            "o"
+          ]
+        },
+        "type": "ProjectOp"
+      }
+    },
+    {
+      "id": "Serializer_3",
+      "operator": {
+        "config": {
+          "patterns": [
+            {
+              "object": {
+                "attribute": "o",
+                "type": "Attribute"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "http://example.com/base/pom"
+              ],
+              "predicate": {
+                "origin": [
+                  "http://example.com/base/pm"
+                ],
+                "term": {
+                  "iri": "http://xmlns.com/foaf/0.1/name",
+                  "type": "Iri"
+                },
+                "type": "Constant"
+              },
+              "subject": {
+                "attribute": "s",
+                "type": "Attribute"
+              }
+            }
+          ]
+        },
+        "type": "SerializerOp"
+      },
+      "origin": [
+        "http://example.com/base/TriplesMap1"
+      ]
+    },
+    {
+      "id": "Target_4",
+      "operator": {
+        "config": {
+          "default": true
+        },
+        "type": "TargetOp"
+      }
+    }
+  ]
+}

@@ -12,6 +12,7 @@ common = {path = "../common/"}
 
 
 [dev-dependencies]
+pipeline-test = { path = "../pipeline-test/" }
 anyhow.workspace = true
 clap.workspace = true
 

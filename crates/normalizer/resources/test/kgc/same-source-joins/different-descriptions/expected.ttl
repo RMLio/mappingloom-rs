@@ -1,0 +1,24 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+# Logical sources that differ in their path or in their reference
+# formulation keep the joins between them.
+ex:TM rml:logicalSource [
+    rml:referenceFormulation rml:JSONPath ;
+    rml:source [ rml:root rml:MappingDirectory ; rml:path "a.json" ]
+  ] ;
+  rml:predicateObjectMap [ rml:objectMap ex:ROM1, ex:ROM2 ] .
+ex:ROM1 rml:parentTriplesMap ex:OtherPath .
+ex:ROM2 rml:parentTriplesMap ex:OtherFormulation .
+ex:OtherPath rml:logicalSource [
+    rml:referenceFormulation rml:JSONPath ;
+    rml:source [ rml:root rml:MappingDirectory ; rml:path "b.json" ]
+  ] ;
+  rml:subjectMap [ rml:reference "x" ] .
+ex:OtherFormulation rml:logicalSource [
+    rml:referenceFormulation rml:CSV ;
+    rml:source [ rml:root rml:MappingDirectory ; rml:path "a.json" ]
+  ] ;
+  rml:subjectMap [ rml:reference "x" ] .

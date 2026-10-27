@@ -1,0 +1,23 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+ex:TM rml:subjectMap ex:SM ;
+  rml:predicateObjectMap [
+      rml:predicateMap ex:P1 ; rml:objectMap ex:O ; rml:graphMap ex:G ;
+      nf:origin ex:POM
+    ], [
+      rml:predicateMap ex:P1 ; rml:objectMap ex:O ; rml:graphMap ex:SG ;
+      nf:origin ex:POM
+    ], [
+      rml:predicateMap ex:P2 ; rml:objectMap ex:O ; rml:graphMap ex:G ;
+      nf:origin ex:POM
+    ], [
+      rml:predicateMap ex:P2 ; rml:objectMap ex:O ; rml:graphMap ex:SG ;
+      nf:origin ex:POM
+    ], [
+      rml:predicateMap ex:T ; rml:objectMap ex:C ; rml:graphMap ex:SG ;
+      nf:origin ex:SM
+    ] .
+ex:SM rml:graphMap ex:SG .

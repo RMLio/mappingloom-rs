@@ -1,0 +1,750 @@
+{
+  "$defs": {
+    "Access": {
+      "description": "Where a Source reads its records.",
+      "oneOf": [
+        {
+          "description": "A file, at `path` relative to `root`.",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "root": {
+              "$ref": "#/$defs/Root"
+            },
+            "type": {
+              "const": "File",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "path",
+            "root"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "One record without values.",
+          "properties": {
+            "type": {
+              "const": "OneRecord",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Edge": {
+      "description": "An edge from an operator to one that takes its output as input.",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "Encoding": {
+      "description": "How a template encodes the values of its attributes: IRI-safe (RFC 3987\n`iunreserved` kept), URI-safe (RFC 3986 `unreserved` kept), or not at\nall.",
+      "enum": [
+        "IriSafe",
+        "UriSafe",
+        "None"
+      ],
+      "type": "string"
+    },
+    "Expression": {
+      "description": "An expression of an Extend: it maps an input tuple to a list of values or\nterms. Unless stated otherwise, an expression over several lists yields\none result per combination of their elements, and nothing if one of them\nis absent.",
+      "oneOf": [
+        {
+          "description": "The list bound to an attribute of the input tuple.",
+          "properties": {
+            "attribute": {
+              "type": "string"
+            },
+            "type": {
+              "const": "Reference",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "attribute"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "One `xsd:string` value per combination of the values of its\nattributes, one value per attribute piece: the pieces concatenated,\neach value's lexical form encoded by `encoding`. Absent if any\nattribute is absent.",
+          "properties": {
+            "encoding": {
+              "$ref": "#/$defs/Encoding"
+            },
+            "pieces": {
+              "items": {
+                "$ref": "#/$defs/Piece"
+              },
+              "type": "array"
+            },
+            "type": {
+              "const": "Template",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "pieces",
+            "encoding"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The one-element list of a complete term.",
+          "properties": {
+            "term": {
+              "$ref": "#/$defs/Term"
+            },
+            "type": {
+              "const": "Constant",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "term"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Per value, its lexical form as an IRI if it is an absolute one,\notherwise `base` followed by it; a data error if neither is valid.",
+          "properties": {
+            "base": {
+              "description": "The IRI that a relative value follows.",
+              "type": "string"
+            },
+            "inner": {
+              "$ref": "#/$defs/Expression"
+            },
+            "kind": {
+              "$ref": "#/$defs/IriKind"
+            },
+            "type": {
+              "const": "Iri",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "inner",
+            "base",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Per value, the blank node with its lexical form as identifier.",
+          "properties": {
+            "inner": {
+              "$ref": "#/$defs/Expression"
+            },
+            "type": {
+              "const": "BlankNode",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "inner"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "One fresh blank node per tuple, identified by `key` and the values of\nthe `index` attributes. Expressions with the same key give the same\nnode for the same index values.",
+          "properties": {
+            "index": {
+              "description": "The attributes that identify the tuple's record, `#` first.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "key": {
+              "type": "string"
+            },
+            "type": {
+              "const": "FreshBlankNode",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "key",
+            "index"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Per value, a literal: its natural RDF literal, or one literal per\ndatatype of `datatype`, or one per language tag of `language`.",
+          "properties": {
+            "datatype": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Expression"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "inner": {
+              "$ref": "#/$defs/Expression"
+            },
+            "language": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Expression"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "const": "Literal",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "inner"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ExtendOp": {
+      "description": "Binds new attributes, each to the list its expression gives on the input\ntuple. An expression reads input attributes only, never a sibling's.",
+      "properties": {
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/ExtendPair"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pairs"
+      ],
+      "type": "object"
+    },
+    "ExtendPair": {
+      "properties": {
+        "attribute": {
+          "type": "string"
+        },
+        "expression": {
+          "$ref": "#/$defs/Expression"
+        },
+        "origin": {
+          "description": "The mapping nodes the expression comes from.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "attribute",
+        "expression"
+      ],
+      "type": "object"
+    },
+    "Field": {
+      "description": "A list field: the attribute bound to the values of a query per record.",
+      "properties": {
+        "attribute": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "single_valued": {
+          "description": "Whether the query gives at most one value per record.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "attribute",
+        "reference",
+        "single_valued"
+      ],
+      "type": "object"
+    },
+    "IriKind": {
+      "description": "Whether the `Iri` expression checks for an absolute IRI or an absolute\nURI.",
+      "enum": [
+        "Iri",
+        "Uri"
+      ],
+      "type": "string"
+    },
+    "Node": {
+      "properties": {
+        "id": {
+          "description": "Unique within the plan; it names the node for its edges only.",
+          "type": "string"
+        },
+        "operator": {
+          "$ref": "#/$defs/Operator"
+        },
+        "origin": {
+          "description": "The IRIs of the mapping nodes this operator comes from, such as the\ndata descriptions that a Source reads. An origin is for provenance\nonly; it never changes what a plan produces.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "operator"
+      ],
+      "type": "object"
+    },
+    "Operator": {
+      "description": "An operator of the plan graph. A Source has no input and a Target no\noutput; a Union and a Target take any number of inputs, and every other\noperator exactly one.",
+      "oneOf": [
+        {
+          "properties": {
+            "config": {
+              "$ref": "#/$defs/SourceOp"
+            },
+            "type": {
+              "const": "SourceOp",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "config"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "config": {
+              "$ref": "#/$defs/ExtendOp"
+            },
+            "type": {
+              "const": "ExtendOp",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "config"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "config": {
+              "$ref": "#/$defs/ProjectOp"
+            },
+            "type": {
+              "const": "ProjectOp",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "config"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "config": {
+              "$ref": "#/$defs/RenameOp"
+            },
+            "type": {
+              "const": "RenameOp",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "config"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The bag union of inputs with equal schemas.",
+          "properties": {
+            "type": {
+              "const": "UnionOp",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "config": {
+              "$ref": "#/$defs/SerializerOp"
+            },
+            "type": {
+              "const": "SerializerOp",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "config"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "config": {
+              "$ref": "#/$defs/TargetOp"
+            },
+            "type": {
+              "const": "TargetOp",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "config"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Piece": {
+      "description": "A piece of a template: literal text, or an attribute.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "attribute": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "attribute"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Position": {
+      "description": "A position of a quad pattern: an attribute, or a constant term.",
+      "oneOf": [
+        {
+          "properties": {
+            "attribute": {
+              "type": "string"
+            },
+            "type": {
+              "const": "Attribute",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "attribute"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "origin": {
+              "description": "The mapping nodes the constant comes from.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "term": {
+              "$ref": "#/$defs/Term"
+            },
+            "type": {
+              "const": "Constant",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "term"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ProjectOp": {
+      "description": "Keeps the listed attributes.",
+      "properties": {
+        "attributes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "attributes"
+      ],
+      "type": "object"
+    },
+    "QuadPattern": {
+      "properties": {
+        "graph": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Position"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Absent for the default graph."
+        },
+        "object": {
+          "$ref": "#/$defs/Position"
+        },
+        "origin": {
+          "description": "The mapping nodes the pattern comes from.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "predicate": {
+          "$ref": "#/$defs/Position"
+        },
+        "subject": {
+          "$ref": "#/$defs/Position"
+        }
+      },
+      "required": [
+        "subject",
+        "predicate",
+        "object"
+      ],
+      "type": "object"
+    },
+    "RenameOp": {
+      "description": "Renames attributes; the others keep their names.",
+      "properties": {
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/RenamePair"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pairs"
+      ],
+      "type": "object"
+    },
+    "RenamePair": {
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "Root": {
+      "description": "The directory a relative file path starts from.",
+      "enum": [
+        "MappingDirectory",
+        "CurrentWorkingDirectory"
+      ],
+      "type": "string"
+    },
+    "SerializerOp": {
+      "description": "Per tuple and pattern, one quad per combination of the four positions'\nlists; an absent position gives none.",
+      "properties": {
+        "patterns": {
+          "items": {
+            "$ref": "#/$defs/QuadPattern"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "patterns"
+      ],
+      "type": "object"
+    },
+    "SourceOp": {
+      "description": "Yields one tuple per record: `#`, the record's zero-based position in the\niteration, and each field bound to the list of its query's values.",
+      "properties": {
+        "access": {
+          "$ref": "#/$defs/Access"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/Field"
+          },
+          "type": "array"
+        },
+        "iterator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "null_values": {
+          "description": "The values that stand for no value, besides the format's own null.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "query_language": {
+          "description": "The IRI of the query language of the iterator and the field\nreferences, such as JSONPath; absent for `OneRecord` access.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "access",
+        "fields"
+      ],
+      "type": "object"
+    },
+    "TargetOp": {
+      "description": "Writes the set of the quads of its inputs. The default Target takes its\ndestination and serialization from the engine.",
+      "properties": {
+        "default": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "default"
+      ],
+      "type": "object"
+    },
+    "Term": {
+      "description": "A complete RDF term, as a constant gives it.",
+      "oneOf": [
+        {
+          "properties": {
+            "iri": {
+              "type": "string"
+            },
+            "type": {
+              "const": "Iri",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "iri"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "A literal with a datatype IRI or a language tag; with neither, an\n`xsd:string`.",
+          "properties": {
+            "datatype": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "language": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "const": "Literal",
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "$id": "https://w3id.org/imec/knows/algemaploom/plan/1.0/plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "A plan as it travels to an engine.",
+  "properties": {
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/Edge"
+      },
+      "type": "array"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/Node"
+      },
+      "type": "array"
+    },
+    "producer": {
+      "type": "string"
+    },
+    "version": {
+      "description": "The schema version, `MAJOR.MINOR`.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "producer",
+    "nodes",
+    "edges"
+  ],
+  "title": "PlanDocument",
+  "type": "object"
+}

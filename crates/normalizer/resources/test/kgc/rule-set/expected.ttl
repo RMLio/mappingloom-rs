@@ -1,0 +1,44 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix genid: <https://github.com/RMLio/algemaploom-rs/.well-known/genid/> .
+@prefix ex: <http://example.com/> .
+
+# ex:TM1 keeps its logical source and subject map; one copy per
+# predicate-object map, each with the subject map's graph map. The
+# nf:origin links name _:sm1 and _:pom1 by their skolem IRIs.
+ex:TM1 a rml:TriplesMap ; rml:logicalSource _:ls1 ; rml:subjectMap _:sm1 ;
+  rml:baseIRI <http://example.com/base/> .
+[] a rml:TriplesMap ; rml:logicalSource _:ls1 ; rml:subjectMap _:sm1 ;
+  rml:baseIRI <http://example.com/base/> ; nf:origin ex:TM1 ;
+  rml:predicateObjectMap [
+      rml:predicateMap [ rml:constant ex:sport ; nf:origin genid:c14n3 ] ;
+      rml:objectMap [
+          rml:template "sport/{Sport}" ; rml:termType rml:IRI ;
+          nf:parentTriplesMap ex:TM2
+        ] ;
+      rml:graphMap _:g ;
+      nf:origin genid:c14n3
+    ] .
+[] a rml:TriplesMap ; rml:logicalSource _:ls1 ; rml:subjectMap _:sm1 ;
+  rml:baseIRI <http://example.com/base/> ; nf:origin ex:TM1 ;
+  rml:predicateObjectMap [
+      rml:predicateMap [ rml:constant rdf:type ; nf:origin genid:c14n0 ] ;
+      rml:objectMap [ rml:constant ex:Student ; nf:origin genid:c14n0 ] ;
+      rml:graphMap _:g ;
+      nf:origin genid:c14n0
+    ] .
+_:ls1 rml:referenceFormulation rml:JSONPath ; rml:iterator "$[*]" ;
+  rml:source [ rml:root rml:MappingDirectory ; rml:path "s.json" ] .
+_:sm1 rml:template "s/{ID}" ; rml:termType rml:IRI .
+_:g rml:constant ex:G ; nf:origin genid:c14n0 .
+genid:c14n0 nf:label "sm1" .
+genid:c14n3 nf:label "pom1" .
+
+ex:TM2 a rml:TriplesMap ;
+  rml:logicalSource [
+      rml:referenceFormulation rml:JSONPath ; rml:iterator "$[*]" ;
+      rml:source [ rml:root rml:MappingDirectory ; rml:path "s.json" ]
+    ] ;
+  rml:subjectMap [ rml:template "sport/{Sport}" ; rml:termType rml:IRI ] ;
+  rml:baseIRI <http://example.com/base/> .

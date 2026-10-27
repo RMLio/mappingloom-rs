@@ -1,6 +1,7 @@
 use std::string::FromUtf8Error;
 
 use oxigraph::io::RdfParseError;
+use oxigraph::model::IriParseError;
 use oxigraph::sparql::{SparqlSyntaxError, UpdateEvaluationError};
 use oxigraph::store::{LoaderError, SerializerError, StorageError};
 use thiserror::Error;
@@ -56,5 +57,11 @@ pub enum NormalizerError {
         #[from]
         #[source]
         SparqlSyntaxError,
+    ),
+    #[error("invalid base IRI")]
+    BaseIri(
+        #[from]
+        #[source]
+        IriParseError,
     ),
 }

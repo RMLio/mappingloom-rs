@@ -1,0 +1,19 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+ex:TM rml:subjectMap ex:SM ; rml:predicateObjectMap ex:POM .
+ex:SM rml:template "s/{a}" ; rml:graphMap ex:GM ; rml:termType rml:IRI .
+ex:GM rml:reference "g" ; rml:termType rml:IRI .
+ex:POM rml:predicateMap ex:PM ;
+  rml:objectMap ex:Ref, ex:Tmpl, ex:Typed, ex:Tagged, ex:Fn .
+ex:PM rml:template "p/{a}" ; rml:termType rml:IRI .
+ex:Ref rml:reference "a" ; rml:termType rml:Literal .
+ex:Tmpl rml:template "o/{a}" ; rml:termType rml:IRI .
+ex:Typed rml:template "{a}" ; rml:datatypeMap ex:DM ;
+  rml:termType rml:Literal .
+ex:DM rml:template "dt/{t}" ; rml:termType rml:IRI .
+ex:Tagged rml:template "{a}" ; rml:languageMap [ rml:reference "l" ] ;
+  rml:termType rml:Literal .
+ex:Fn rml:functionExecution ex:FE ; rml:termType rml:Literal .

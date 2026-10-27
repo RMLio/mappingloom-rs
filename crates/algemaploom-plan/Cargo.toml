@@ -1,0 +1,11 @@
+[package]
+name = "algemaploom-plan"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+petgraph.workspace = true
+schemars = "1.2.3"
+serde.workspace = true
+serde_json.workspace = true

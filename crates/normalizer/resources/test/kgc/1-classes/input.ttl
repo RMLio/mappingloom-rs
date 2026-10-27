@@ -1,0 +1,7 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+ex:TM rml:subjectMap ex:SM .
+ex:SM rml:template "s/{a}" ; rml:class ex:A, ex:B .

@@ -1,0 +1,12 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+ex:TM rml:subjectMap ex:SM ; rml:predicateObjectMap ex:POM .
+ex:SM rml:termType rml:BlankNode .
+ex:POM rml:predicateMap ex:PM ; rml:objectMap ex:Const, ex:Iri, ex:ROM .
+ex:PM rml:constant ex:p .
+ex:Const rml:constant "c" .
+ex:Iri rml:reference "a" ; rml:termType rml:IRI .
+ex:ROM rml:parentTriplesMap ex:Parent .

@@ -1,0 +1,10 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+ex:TM1 rml:subjectMap [ rml:graphMap ex:G1 ] ;
+  rml:predicateObjectMap ex:POM .
+ex:TM2 rml:subjectMap [ rml:reference "s" ] ;
+  rml:predicateObjectMap ex:POM .
+ex:POM rml:predicateMap ex:P ; rml:objectMap ex:O .

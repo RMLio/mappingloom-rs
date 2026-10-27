@@ -1,0 +1,16 @@
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix nf: <https://w3id.org/imec/knows/ns/rml/normal-form#> .
+@prefix ex: <http://example.com/> .
+
+# Two triples maps share an object map whose parent reads a third logical
+# source; all three are equal by value.
+ex:TM1 rml:logicalSource ex:A ;
+  rml:predicateObjectMap [ rml:objectMap ex:ROM ] .
+ex:TM2 rml:logicalSource ex:B ;
+  rml:predicateObjectMap [ rml:objectMap ex:ROM ] .
+ex:ROM rml:parentTriplesMap ex:TM3 .
+ex:TM3 rml:logicalSource ex:C ; rml:subjectMap [ rml:reference "x" ] .
+ex:A rml:source [ rml:path "a.csv" ] .
+ex:B rml:source [ rml:path "a.csv" ] .
+ex:C rml:source [ rml:path "a.csv" ] .
