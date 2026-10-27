@@ -4,7 +4,7 @@ set -e
 
 # Rust build
 echo "==> Rust building and bindings"
-cargo build --lib --release --features=neon
+cargo build -p translator --lib --release --features=neon
 
 # NodeJS bindings
 echo "==> NodeJS bindings"

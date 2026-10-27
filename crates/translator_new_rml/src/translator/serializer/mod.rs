@@ -209,7 +209,7 @@ mod tests {
     /// The sorted serializer template lines of the plan of the mapping.
     fn plan_template_lines(mapping: &str) -> Vec<String> {
         let plan = NewRMLDocumentTranslator::translate_to_plan(
-            parse_str(mapping).unwrap(),
+            parse_str(mapping, None).unwrap(),
         )
         .unwrap();
         let json: serde_json::Value =

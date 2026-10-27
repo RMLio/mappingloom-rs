@@ -1,9 +1,17 @@
 package be.ugent.idlab.knows.mappingLoom;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.IntStream;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 class Translator implements ITranslator {
-	private static native String translate(String input);
+	/**
+	 * Takes the options object and returns the result document, both as JSON text.
+	 */
+	private static native String translateJson(String mapping, String options);
 
 	static {
         try {
@@ -34,7 +42,16 @@ class Translator implements ITranslator {
 	}
 
 	@Override
-	public String translate_to_document(String document) {
-		return translate(document);
+	public Translation translate(String mapping, Options options) throws TranslationException {
+		JSONObject result = new JSONObject(translateJson(mapping, options.toJson()));
+		List<ErrorRecord> warnings = records(result.getJSONArray("warnings"));
+		if (result.has("errors")) {
+			throw new TranslationException(records(result.getJSONArray("errors")), warnings);
+		}
+		return new Translation(result.getJSONObject("plan").toString(), warnings);
+	}
+
+	private static List<ErrorRecord> records(JSONArray array) {
+		return IntStream.range(0, array.length()).mapToObj(array::getJSONObject).map(ErrorRecord::fromJson).toList();
 	}
 }

@@ -30,19 +30,19 @@ if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && $VERSION != testrelease-* ]]; th
 	exit 1
 fi
 
-echo "Changing version to $VERSION"
+# Sets the version of the crates (Cargo.toml, Cargo.lock), the Java binding
+# (pom.xml) and the Node.js package (package.json, package-lock.json).
+function set_version {
+	echo "Changing version to $1"
+	sed -i -e "s|^version = \".*\"|version = \"$1\"|" Cargo.toml
+	cargo update --workspace
+	cd crates/translator/src/java/algemaploom/
+	mvn versions:set -DnewVersion=$1 -DgenerateBackupPoms=false
+	cd $SCRIPTDIR
+	npm version $1 --no-git-tag-version --allow-same-version
+}
 
-echo 'Updating Cargo.toml...'
-sed -i -e "s|^version = \".*\"|version = \"$VERSION\"|" Cargo.toml
-cargo check
-
-echo 'Updating pom.xml...'
-cd crates/translator/src/java/algemaploom/
-mvn versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
-cd $SCRIPTDIR
-
-echo 'Updating package.json...'
-sed -i -e "s|\"version\": \".*\"|\"version\": \"$VERSION\"|" package.json
+set_version $VERSION
 
 if [ ! "$(yes_or_no 'Do you also want to add the version to CHANGELOG.md?')" ]
 then
@@ -57,20 +57,17 @@ fi
 
 if [ ! "$(yes_or_no Do you also want to commit the changes, create a git tag $tagname and push it?)" ]
 then
-	git add Cargo.toml Cargo.lock package.json crates/translator/src/java/algemaploom/pom.xml CHANGELOG.md
+	git add Cargo.toml Cargo.lock package.json package-lock.json crates/translator/src/java/algemaploom/pom.xml CHANGELOG.md
 	git commit -m "Update version to $VERSION"
 	git push origin
 	git tag $tagname
 	git push origin $tagname
 
-	# Prepare the Java binding for the next development cycle, so a local
-	# build is distinguishable from the release.
+	# Prepare the next development cycle, so a local build is
+	# distinguishable from the release.
 	if [[ $VERSION != testrelease-* ]] ; then
-		NEXT="${VERSION%.*}.$((${VERSION##*.} + 1))-SNAPSHOT"
-		cd crates/translator/src/java/algemaploom/
-		mvn versions:set -DnewVersion=$NEXT -DgenerateBackupPoms=false
-		cd $SCRIPTDIR
-		git add crates/translator/src/java/algemaploom/pom.xml
+		set_version "${VERSION%.*}.$((${VERSION##*.} + 1))-SNAPSHOT"
+		git add Cargo.toml Cargo.lock package.json package-lock.json crates/translator/src/java/algemaploom/pom.xml
 		git commit -m "Prepare for next development cycle"
 		git push origin
 	fi

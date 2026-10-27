@@ -3,7 +3,9 @@
 # AlgeMapLoom JNI bindings native Rust library building script
 # License: MIT (2024)
 #
-#set -e
+# NATIVE_APPLE=false skips the macOS libraries, for a build whose jar is only
+# tested on Linux.
+set -e
 
 # Remove Rust library as resource
 echo "==> Cleaning up old Rust library"
@@ -11,38 +13,32 @@ rm -rf src/main/resources/Linux/*
 rm -rf src/main/resources/Windows/*
 rm -rf src/main/resources/Apple-x86_64/*
 rm -rf src/main/resources/Apple-aarch64/*
+RESOURCES=crates/translator/src/java/algemaploom/src/main/resources
 cd ../../../../../
 rm -rf target
 
-# Compile Rust library
-echo "==> Building Rust library for Linux x86..."
-echo "==> Check target/x86_64-unknown-linux-gnu/log.txt for errors!"
-mkdir -p target/x86_64-unknown-linux-gnu
-cargo build --lib --release --features=jni --target=x86_64-unknown-linux-gnu >target/x86_64-unknown-linux-gnu/log.txt 2>&1
+# Builds the library for a target with the given cargo command, and copies it
+# into the jar's resource folder.
+function build {
+	echo "==> Building Rust library for $2 (log: target/$2/log.txt)"
+	mkdir -p target/$2
+	$1 -p translator --lib --release --features=jni --target=$2 >target/$2/log.txt 2>&1
+	cp target/$2/release/$3 $RESOURCES/$4/
+}
 
-echo "==> Building Rust library for Windows x86..."
-echo "==> Check target/x86_64-pc-windows-gnu/log.txt for errors!"
-mkdir -p target/x86_64-pc-windows-gnu
-cargo build --lib --release --features=jni --target=x86_64-pc-windows-gnu >target/x86_64-pc-windows-gnu/log.txt 2>&1
+build "cargo build" x86_64-unknown-linux-gnu libtranslator.so Linux
+build "cargo build" x86_64-pc-windows-gnu translator.dll Windows
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-	echo "==> Building Rust library for Apple x86..."
-	mkdir -p target/x86_64-apple-darwin
-	cargo build --lib --release --features=jni --target=x86_64-apple-darwin >target/x86_64-apple-darwin/log.txt 2>&1
-	echo "==> Building Rust library for Apple aarch64..."
-	mkdir -p target/aarch64-apple-darwin
-	cargo build --lib --release --features=jni --target=aarch64-apple-darwin >target/aarch64-apple-darwin/log.txt 2>&1
-else
-	echo "==> Building Rust library for Apple x86/aarch64 skipped, only supported on native Apple due to license issues."
-fi
-
-# Copy compiled Rust library to Java Jar resource location
-echo "==> Copying Rust library to Java Jar resource"
-cp target/x86_64-unknown-linux-gnu/release/libtranslator.so crates/translator/src/java/algemaploom/src/main/resources/Linux/
-cp target/x86_64-pc-windows-gnu/release/translator.dll crates/translator/src/java/algemaploom/src/main/resources/Windows/
-if [[ "$OSTYPE" == "darwin"* ]]; then
-	cp target/x86_64-apple-darwin/release/libtranslator.dylib crates/translator/src/java/algemaploom/src/main/resources/Apple-x86_64
-	cp target/aarch64-apple-darwin/release/libtranslator.dylib crates/translator/src/java/algemaploom/src/main/resources/Apple-aarch64
+# The library links no Apple framework, so off a Mac cargo-zigbuild builds it
+# without the Apple SDK.
+if [[ "$NATIVE_APPLE" != false ]]; then
+	if [[ "$OSTYPE" == "darwin"* ]]; then
+		CARGO_APPLE="cargo build"
+	else
+		CARGO_APPLE="cargo zigbuild"
+	fi
+	build "$CARGO_APPLE" x86_64-apple-darwin libtranslator.dylib Apple-x86_64
+	build "$CARGO_APPLE" aarch64-apple-darwin libtranslator.dylib Apple-aarch64
 fi
 
 echo "Done!"

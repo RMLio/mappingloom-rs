@@ -4,7 +4,7 @@ set -e
 
 # Rust build
 echo "==> Rust building and bindings"
-cargo build --lib --release --features=pyo3
+cargo build -p translator --lib --release --features=pyo3
 
 # Python bindings
 echo "==> Python bindings"

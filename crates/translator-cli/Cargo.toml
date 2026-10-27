@@ -1,0 +1,23 @@
+[package]
+name = "translator-cli"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+translator = { path = "../translator/" }
+common = { path = "../common/" }
+
+clap.workspace = true
+colored = "3.1.1"
+log.workspace = true
+serde_json.workspace = true
+walkdir = "2.5.0"
+
+[[bin]]
+name = "translator-bin"
+path = "src/bin/translator-bin/main.rs"
+
+[[bin]]
+name = "sparql-rml-pruner"
+path = "src/bin/pruner-bin/main.rs"

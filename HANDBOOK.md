@@ -8,12 +8,13 @@ Written for a CS student who wants to understand MappingLoom as code.
 2. [Agent request contract (for AI agents/LLMs)](#agent-request-contract-for-ai-agentsllms)
 3. [Workspace layout](#workspace-layout)
 4. [How a mapping becomes a plan](#how-a-mapping-becomes-a-plan)
-5. [The canonical pipeline](#the-canonical-pipeline)
-6. [Build, format and test](#build-format-and-test)
-7. [Test resources](#test-resources)
-8. [Conformance](#conformance)
-9. [Language bindings](#language-bindings)
-10. [Release process](#release-process)
+5. [Requests, results and errors](#requests-results-and-errors)
+6. [The canonical pipeline](#the-canonical-pipeline)
+7. [Build, format and test](#build-format-and-test)
+8. [Test resources](#test-resources)
+9. [Conformance](#conformance)
+10. [Language bindings](#language-bindings)
+11. [Release process](#release-process)
 
 ## Preface
 
@@ -27,15 +28,17 @@ the plan.
   `rust-toolchain.toml`), with every crate under `crates/`. The workspace
   version (`0.8.0`) lives in the root `Cargo.toml`; the Java binding has its own
   Maven version (see Release process).
-- CLIs: the `translator` crate builds `translator-bin`
-  (`crates/translator/src/bin/translator-bin/`) with the subcommands `file`,
-  `folder` and `stdin`, and the flags `-d` (debug logging), `-j` (JSON only)
-  and `-p` (pretty-print). It also declares `sparql-rml-pruner`, which is a
-  placeholder (`unimplemented!`). The `normalizer` crate has an example CLI,
+- CLIs: the `translator-cli` crate builds `translator-bin`
+  (`crates/translator-cli/src/bin/translator-bin/`) with the subcommands `file`,
+  `folder` and `stdin`, the request options `--language`, `--base-iri`,
+  `--optimizer` and `--options`, and the flags `-d` (debug logging), `-j`
+  (JSON only), `-p` (pretty-print) and `--report` (see Requests, results and
+  errors). It also declares `sparql-rml-pruner`, which is a placeholder
+  (`unimplemented!`). The `normalizer` crate has an example CLI,
   `cli_normalizer`.
 - Tests: Rust unit tests and plan snapshots inside the crates (`#[test]`), with
   test resources under each crate's `resources/` directory; tests that run
-  `translator-bin` itself are in `crates/translator/tests/`; the Java binding
+  `translator-bin` itself are in `crates/translator-cli/tests/`; the Java binding
   has Maven tests under `crates/translator/src/java/algemaploom`.
 - The project keeps a `README.md` (usage, covered specs, bindings) and a
   `CHANGELOG.md` in Keep a Changelog format.
@@ -83,25 +86,36 @@ All crates live under `crates/` and are workspace members (`members = ["crates/*
 | `translator_rml` | Translator for RML v1 (rml.io spec, R2RML-based). |
 | `translator_new_rml` | Translator for the current RML spec (kg-construct RML modules), split into `extractors/` (RDF graph to RML model) and `translator/` (RML model to plan). |
 | `translator_shexml` | Translator for ShExML (parser combinators in `parcombi/`), with a best-effort translation of unsupported features. |
-| `translator` | The front end: the CLI binaries, the `api` module (`process_one_file`, `process_one_str`) and the Java/Python/Node.js bindings. |
+| `translator` | The front end: the `api` module (`translate`, `translate_json`), the request and result types, and the Java/Python/Node.js bindings. |
+| `translator-cli` | The command line: `translator-bin` and the placeholder `sparql-rml-pruner`, with the CLI's dependencies (clap, the logger of `common`). |
 | `common` | Shared utilities such as the logger. |
 | `normalizer` | Normalizes a mapping with SPARQL Update rules over an Oxigraph store: the RML-KGC rule set of the canonical pipeline, and the paper's RML.io rule set (see The canonical pipeline). |
 | `translator_normalized_rml` | Translator for normalized RML documents. |
 | `algemaploom-plan` | The plans of the canonical pipeline: the IR's operators and functions, the plan document and its JSON Schema (see The canonical pipeline). |
+| `optimizer` | The optimizer of the canonical pipeline: the `Rule` trait, the rules in the order they run, and their toggles (see The canonical pipeline). |
 | `pipeline-test` | Test harness of the canonical pipeline: graph cases for normalizer rules, and plan snapshots validated against the plan schema. A dev-dependency only. |
 | `sparql-sat-checker` | Checks SPARQL/triples-map satisfiability on plans; uses `translator_normalized_rml`. It carries its own version (`0.1.0`) and edition 2024. Unmaintained and kept for reference: nothing calls it, and its crate documentation lists its known defects. |
 
 ## How a mapping becomes a plan
 
-`translator::api::process` tries each `TranslatorHandler` in turn (`RMLHandler`,
-then `ShExMLHandler`) and keeps the first plan that succeeds; when all fail,
-it logs the error chain of every handler.
+`translator::api::translate` takes the mapping and the request options, and
+the language that the options name picks the translator: `rml-kgc` goes to
+`translator_new_rml` (current RML spec), `rml-io` goes to `translator_rml`
+(RML v1), and `shexml` goes to `translator_shexml`. `r2rml` is
+*unsupported*, since `translator_rml` reads no logical tables. The caller
+always names the language, since the languages differ in subtle ways that a
+guess from the text would hide.
 
-`RMLHandler` (`crates/translator/src/rml.rs`) chooses the RML translator by
-looking at the document text: a document that contains the R2RML namespace
-(`<http://www.w3.org/ns/r2rml#>`) goes to `translator_rml` (RML v1); every
-other document goes to `translator_new_rml` (current RML spec). This detection
-is a heuristic, marked as a TODO in the code.
+A Turtle mapping first passes a syntax check (`oxttl`), which reports every
+syntax error with its location (the translators' own parsers report none)
+and reads the document's `@base`. Relative IRIs in the mapping document
+resolve against `@base` alone, as Turtle defines, so a relative IRI in a
+document without `@base` is a syntax error.
+
+The base IRI option is the processor's base IRI: every triples map without
+`rml:baseIRI` takes it, and without it the document's `@base`. With neither,
+the plan carries an empty base IRI, and the engine fails only on a generated
+IRI that needs one.
 
 `translator_new_rml` first indexes the document in a `SearchStore`
 (`translator/store.rs`): triples maps and subject maps by identifier, a quad
@@ -121,10 +135,57 @@ graph maps only. `serializer/mod.rs` tests this with a mapping whose
 predicate-object maps differ in their graph maps.
 
 The CLI writes the plan next to the input (or with the derived output prefix)
-as DOT and JSON; `-j` limits output to JSON. `stdin` prints the JSON plan to
-standard output. The Java binding's `Cli` does the same for a file argument or
-standard input. Both read the mapping as a whole, line breaks included, because
-a Turtle comment ends at the end of its line.
+as DOT and JSON; `-j` limits output to JSON. `folder` translates the `.ttl`
+files under the folder, or the `.shexml` files for ShExML. `stdin` prints the
+JSON plan to standard output. The Java binding's `Cli` does the same for a
+file argument or standard input. Both read the mapping as a whole, line breaks
+included, because a Turtle comment ends at the end of its line.
+
+## Requests, results and errors
+
+Every entry point makes the same request: the mapping text and an options
+object (`request::Options`), which is JSON in the bindings and in
+`translator-bin --options`:
+
+| Key | Value |
+|---|---|
+| `language` | `rml-kgc`, `rml-io`, `r2rml` or `shexml`; required |
+| `base_iri` | the processor's base IRI (see How a mapping becomes a plan) |
+| `optimizer` | an object from rule id to `true` or `false`; a rule without a toggle takes its default |
+
+`api::translate` returns a `Translation` (the plan and the warnings) or
+`TranslationErrors` (at least one error, and the warnings found before). A
+panic inside it becomes an *internal* error, so no binding sees a panic.
+`api::translate_json` is the entry point of the bindings: it takes the options
+as JSON text and returns the result document as JSON text, either
+`{"version", "plan", "warnings"}` or `{"version", "errors", "warnings"}`, where
+`version` is the plan schema's version (`algemaploom_plan::VERSION`). One JSON
+encoding, tested once in Rust, serves the three bindings, and a new option or
+error field changes no native signature.
+
+An error or a warning is a `report::Record`: `kind`, `code` (stable within
+its kind), `message`, and where known `origin` (the mapping node, as an IRI
+or skolem IRI), `location` (line and column, from 1) and `causes` (the
+underlying messages, outermost first). The kinds and their codes:
+
+| Kind | Code | Meaning |
+|---|---|---|
+| request | `invalid-options` | the options are no JSON object, or have an unknown key or value, or no language |
+| request | `invalid-base-iri` | `base_iri` is no absolute IRI |
+| request | `unknown-rule` | an optimizer toggle names no rule |
+| request | `ignored-option` (warning) | `base_iri` for ShExML, which has no base IRI |
+| syntax | `invalid-turtle` | the mapping is not valid Turtle; one record per error, with its location |
+| syntax | `invalid-shexml` | the mapping is not valid ShExML |
+| mapping | `invalid-mapping` | a legacy translator rejected the mapping; its messages are the causes |
+| unsupported | `unsupported-language` | the language has no translator yet (`r2rml`) |
+| internal | `panic` | the translator panicked |
+
+The *unsupported* kind (a valid mapping that the translator doesn't handle
+yet) stays apart from *mapping*, so that a conformance run can tell a real
+pass of an error case from a translator that gave up. `translator-bin` exits
+with 0 for a plan, 1 for *syntax*, *mapping* and *unsupported*, 2 for usage
+errors and *request*, and 3 for *internal*; `folder` exits with the highest
+code among its files.
 
 ## The canonical pipeline
 
@@ -181,6 +242,13 @@ pipeline reads:
 - `nf:parentTriplesMap` marks an object map that `same-source-joins`
   inlined, so it is evaluated as its parent's subject map: with the parent's
   base IRI and the parent's fresh blank nodes.
+
+**Optimizer.** The `optimizer` crate rewrites an `algemaploom-plan` plan
+with independent rules, each an implementation of `Rule` with an id (its
+toggle's key, R1 to R7) and a default. `optimizer::rules` lists them in the
+order they run, and `Optimizer::new` switches each on or off from the
+`optimizer` option, rejecting an unknown id. It has no rules yet, so a plan
+passes unchanged; `api::translate` checks the toggles.
 
 The processor's base IRI enters the store as `nf:processor rml:baseIRI <…>`
 for `base-iris`, and leaves it after the last rule. The RML.io rule set
@@ -306,12 +374,32 @@ in a MappingWeaver checkout.
 ## Language bindings
 
 The `translator` crate builds as `cdylib` and `rlib`. Cargo features enable the
-bindings: `jni` (Java), `pyo3` (Python) and `neon` (Node.js). The binding
-code lives in `crates/translator/src/java/` (Maven project `algemaploom`),
-`crates/translator/src/python/` and `crates/translator/src/nodejs/`. The
+bindings: `jni` (Java), `pyo3` (Python) and `neon` (Node.js). The CLI lives
+in `translator-cli`, so the library leaves out its logger (log4rs), which
+links Apple's CoreFoundation framework through chrono: the library links only
+system libraries. The binding code lives in `crates/translator/src/java/` (Maven project
+`algemaploom`), `crates/translator/src/python/` and
+`crates/translator/src/nodejs/`, and each calls `api::translate`. The
 scripts `build_java.sh`, `build_python.sh` and `build_nodejs.sh` build each
-binding; the Java build cross-compiles for Linux, Windows (MinGW) and macOS
-targets. The Java jar also carries the plan schema, as
+binding.
+
+The Java build (`build_native.sh`, run by Maven) cross-compiles the library
+for Linux, Windows (MinGW) and macOS (x86_64 and aarch64), and stops at the
+first failure, so a jar never lacks one. Off a Mac it builds the macOS
+libraries with cargo-zigbuild, which links them with zig and needs no Apple
+SDK, since the library links no Apple framework; `NATIVE_APPLE=false` skips
+them, for a jar that is only tested on Linux. CI installs these toolchains in
+the hidden jobs `.native-targets` (MinGW) and `.apple-targets` (zig), which
+the jobs that build the Java binding reference; only the jobs whose jar
+ships reference `.apple-targets`. The Java wrapper calls the native method
+`translateJson`; a jar and a native library of different versions then fail
+on the first call with an `UnsatisfiedLinkError`, since a native method of
+another name has another JNI symbol.
+
+The Python module is `ltranslator` (`build_python.sh` installs it under that
+name, next to the `translator.py` script), with `__version__`. The Node.js
+binding throws an `Error` whose `name` is `TranslationError`. On Windows, the
+Node.js module loads but exports nothing; it is built and tested on Linux. The Java jar also carries the plan schema, as
 `algemaploom-plan/plan.schema.json`, for consumers that validate plans.
 
 ## Release process
@@ -320,17 +408,17 @@ Step-by-step instructions are in [RELEASE.md](RELEASE.md); this section explains
 
 `./bump-version.sh <version>` performs a release:
 
-1. sets the version in `Cargo.toml` and runs `cargo check` to update `Cargo.lock`;
-2. sets the version in the Java `pom.xml` (`mvn versions:set`) and in `package.json`;
+1. sets the version in `Cargo.toml` and runs `cargo update --workspace` to update `Cargo.lock`;
+2. sets the version in the Java `pom.xml` (`mvn versions:set`), and in `package.json` and `package-lock.json` (`npm version`);
 3. optionally adds the version to `CHANGELOG.md` with `changefrog`;
 4. optionally commits, tags `v<version>` (or the bare version for `testrelease-*`) and pushes;
-5. after a pushed release, sets the Java `pom.xml` to the next patch `-SNAPSHOT` (e.g. `0.8.1-SNAPSHOT` after `0.8.0`), and commits and pushes that as "Prepare for next development cycle".
+5. after a pushed release, sets the same files to the next patch `-SNAPSHOT` (e.g. `0.9.1-SNAPSHOT` after `0.9.0`), and commits and pushes that as "Prepare for next development cycle".
 
-Between releases the Java binding carries that `-SNAPSHOT` version, as the
-KNoWS Java libraries do, so a locally installed MappingLoom stays apart from
-the released artifact in `~/.m2`. `Cargo.toml` and `package.json` keep the
-released version until the next release; development versions for the Python
-and Node.js packages are still to be worked out.
+Between releases the crates, the Java binding and the Node.js package carry
+that `-SNAPSHOT` version, as the KNoWS Java libraries do, so a locally
+installed MappingLoom stays apart from the released artifact in `~/.m2`, and
+a plan's `producer`, `translator-bin --version` and the Python module's
+`__version__` name a development build.
 
 A pushed tag triggers the `Maven Central Deployment` CI job, which signs and
 deploys the Java package from `crates/translator/src/java/algemaploom`.

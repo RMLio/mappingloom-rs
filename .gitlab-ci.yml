@@ -10,6 +10,21 @@ include:
     ref: main
     file: 'CHANGELOG.gitlab-ci.yml'
 
+# The toolchains of the Java binding's native libraries (build_native.sh):
+# MinGW for Windows, which every job that builds the Java binding references,
+# and zig with cargo-zigbuild for macOS, which only the jobs whose jar ships
+# reference; the others set NATIVE_APPLE to false.
+.native-targets:
+  script:
+    - apt-get install -y gcc-mingw-w64
+    - rustup target add x86_64-unknown-linux-gnu x86_64-pc-windows-gnu
+
+.apple-targets:
+  script:
+    - apt-get install -y python3-pip
+    - pip3 install --break-system-packages cargo-zigbuild ziglang
+    - rustup target add x86_64-apple-darwin aarch64-apple-darwin
+
 # Unittests
 test-rust:
   image: rust:latest
@@ -18,16 +33,14 @@ test-rust:
     - cargo test --verbose --jobs 1 --workspace
 
 test-java:
-  image: rustdocker/rust:stable
+  image: rust:latest
   stage: test
+  variables:
+    NATIVE_APPLE: "false"
   script:
-    - apt clean
-    - apt update
-    - apt install -y openjdk-17-jdk curl maven gcc-mingw-w64
-    - rustup target add x86_64-unknown-linux-gnu
-    - rustup target add x86_64-pc-windows-gnu
-    - rustup target add x86_64-apple-darwin
-    - rustup target add aarch64-apple-darwin
+    - apt-get update
+    - apt-get install -y default-jdk maven
+    - !reference [.native-targets, script]
     - ./test_java.sh
 
 # The kg-construct conformance suites, run by MappingWeaver with this
@@ -48,15 +61,15 @@ conformance:
     MAPPINGWEAVER_REF: development
     MTR_UNEXPECTED_PASS: warn
     MTR_CACHE: "$CI_PROJECT_DIR/.mtr-cache"
+    NATIVE_APPLE: "false"
   cache:
     key: conformance
     paths:
       - .mtr-cache
   script:
     - apt-get update
-    - apt-get install -y openjdk-21-jdk-headless maven gcc-mingw-w64
-    - rustup target add x86_64-unknown-linux-gnu
-    - rustup target add x86_64-pc-windows-gnu
+    - apt-get install -y openjdk-21-jdk-headless maven
+    - !reference [.native-targets, script]
     - ./build_java.sh
     - MAPPINGLOOM_VERSION=$(mvn -q -f crates/translator/src/java/algemaploom/pom.xml help:evaluate -Dexpression=project.version -DforceStdout)
     - git clone --depth 1 --branch "$MAPPINGWEAVER_REF" https://github.com/RMLio/MappingWeaver-java.git mappingweaver
@@ -81,13 +94,10 @@ build-java:
   image: rust:latest
   stage: build
   script:
-    - apt clean
-    - apt update
-    - apt install -y default-jdk curl maven gcc-mingw-w64
-    - rustup target add x86_64-unknown-linux-gnu
-    - rustup target add x86_64-pc-windows-gnu
-    - rustup target add x86_64-apple-darwin
-    - rustup target add aarch64-apple-darwin
+    - apt-get update
+    - apt-get install -y default-jdk maven
+    - !reference [.native-targets, script]
+    - !reference [.apple-targets, script]
     - ./build_java.sh
 
 build-python:
@@ -127,11 +137,9 @@ Maven Central Deployment:
     name:  rust:latest
     pull_policy: if-not-present
   before_script:
-    - apt-get update && apt-get install -y gpg ca-certificates default-jdk curl maven gcc-mingw-w64
-    - rustup target add x86_64-unknown-linux-gnu
-    - rustup target add x86_64-pc-windows-gnu
-    - rustup target add x86_64-apple-darwin
-    - rustup target add aarch64-apple-darwin
+    - apt-get update && apt-get install -y gpg ca-certificates default-jdk maven
+    - !reference [.native-targets, script]
+    - !reference [.apple-targets, script]
     - gpg --version
     - gpg --verbose --import --batch --yes $GPG_SECRET_KEY
   script:

@@ -35,7 +35,7 @@ public class CliTest
         try {
             System.setIn(new ByteArrayInputStream(MAPPING_WITH_COMMENT.getBytes(StandardCharsets.UTF_8)));
             System.setOut(new PrintStream(out, true, StandardCharsets.UTF_8));
-            Cli.main(new String[0]);
+            Cli.main(new String[] {"rml-io"});
         } finally {
             System.setIn(stdin);
             System.setOut(stdout);

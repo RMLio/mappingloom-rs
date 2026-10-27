@@ -50,7 +50,12 @@ pub fn load_graph_str(input_str: &str) -> ExtractorResult<FastGraph> {
     }
 }
 
-pub fn parse_str(input_str: &str) -> ExtractorResult<Document> {
+/// Parses a mapping document. Every triples map without `rml:baseIRI` takes
+/// the processor's `base_iri`, or else the document's `@base`.
+pub fn parse_str(
+    input_str: &str,
+    base_iri: Option<&str>,
+) -> ExtractorResult<Document> {
     let graph = load_graph_str(input_str)?;
     let triples_maps = extract_triples_maps(&graph)?;
     if triples_maps.is_empty() {
@@ -59,7 +64,9 @@ pub fn parse_str(input_str: &str) -> ExtractorResult<Document> {
         )
         .into());
     }
-    let base_iri = input_str.split('\n').filter_map(extract_base_iri).next();
+    let base_iri = base_iri.map(str::to_string).or_else(|| {
+        input_str.split('\n').filter_map(extract_base_iri).next()
+    });
     Ok(Document::new(base_iri, triples_maps))
 }
 
@@ -76,7 +83,7 @@ pub fn parse_file(path: PathBuf) -> ExtractorResult<Document> {
         let mut buf_read = BufReader::new(File::open(path.clone())?);
         let mut input_str = String::new();
         buf_read.read_to_string(&mut input_str)?;
-        return parse_str(&input_str); 
+        return parse_str(&input_str, None);
     }
 
     Err(ParseError::IOErrorStr(format!(

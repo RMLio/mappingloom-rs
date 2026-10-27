@@ -2,17 +2,19 @@ package be.ugent.idlab.knows.mappingLoom;
 
 public interface ITranslator {
 	/**
-	 * Translate a mapping into a MappingLoom document.
+	 * Translate a mapping document into a MappingLoom plan.
 	 *
-	 * @param document Mapping to translate in RML or ShExML format.
-     * @return The MappingLoom plan
+	 * @param mapping The mapping document, in the language that the options name.
+	 * @param options The options of the request.
+	 * @return The plan and the warnings.
+	 * @throws TranslationException When the options are invalid or the mapping can't be translated.
 	 */
-	String translate_to_document(String document);
+	Translation translate(String mapping, Options options) throws TranslationException;
 
 	/**
 	 * A default instance of the translator.
-     *
-     * @return A new ITranslator instance
+	 *
+	 * @return A new ITranslator instance
 	 */
 	static ITranslator getInstance() {
 		return new Translator();

@@ -1061,6 +1061,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "optimizer"
+version = "0.8.0"
+dependencies = [
+ "algemaploom-plan",
+]
+
+[[package]]
 name = "ordered-float"
 version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2042,18 +2049,33 @@ dependencies = [
 name = "translator"
 version = "0.8.0"
 dependencies = [
- "clap",
- "colored",
- "common",
+ "algemaploom-plan",
  "jni",
  "log",
  "neon",
+ "optimizer",
+ "oxiri",
+ "oxttl",
  "plan",
  "pyo3",
+ "serde",
+ "serde_json",
  "translator_api",
  "translator_new_rml",
  "translator_rml",
  "translator_shexml",
+]
+
+[[package]]
+name = "translator-cli"
+version = "0.8.0"
+dependencies = [
+ "clap",
+ "colored",
+ "common",
+ "log",
+ "serde_json",
+ "translator",
  "walkdir",
 ]
 

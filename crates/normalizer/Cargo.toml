@@ -8,10 +8,10 @@ edition.workspace = true
 thiserror.workspace = true
 log.workspace = true
 oxigraph = { version = "0.5.7", default-features = false }
-common = {path = "../common/"}
 
 
 [dev-dependencies]
+common = {path = "../common/"}
 pipeline-test = { path = "../pipeline-test/" }
 anyhow.workspace = true
 clap.workspace = true

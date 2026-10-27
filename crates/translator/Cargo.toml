@@ -1,4 +1,3 @@
-
 [package]
 name = "translator"
 version.workspace = true
@@ -6,18 +5,20 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-clap.workspace = true
-
-common = {path = "../common/"}
+algemaploom-plan = { path = "../algemaploom-plan/" }
+optimizer = { path = "../optimizer/" }
 plan = { path = "../plan/" }
 translator_api = { path = "../translator_api/" }
 translator_rml = { path = "../translator_rml/" }
 translator_new_rml = { path = "../translator_new_rml/" }
 translator_shexml = { path = "../translator_shexml/" }
 
-walkdir = "2.5.0"
-colored = "3.1.1"
 log.workspace = true
+oxiri = "0.2.11"
+oxttl = "0.2.3"
+serde.workspace = true
+serde_json.workspace = true
+
 jni = { version = "0.22.4", optional = true }
 neon = { version = "1.1.1", optional = true }
 pyo3 = { version = "0.28.3", features = ["extension-module"], optional = true }
@@ -26,12 +27,3 @@ pyo3 = { version = "0.28.3", features = ["extension-module"], optional = true }
 name = "translator"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
-
-[[bin]]
-name = "translator-bin"
-path = "src/bin/translator-bin/main.rs"
-
-
-[[bin]]
-name = "sparql-rml-pruner"
-path = "src/bin/pruner-bin/main.rs"

@@ -1,4 +1,4 @@
-use clap::{arg, Command};
+use clap::{arg, ArgAction, Command};
 
 pub const TRANSLATOR_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -21,15 +21,20 @@ impl Cli {
                          .arg(arg!(<DOCUMENT> "the mapping document to be translated"))
                          .arg_required_else_help(true))
             .subcommand(Command::new("folder")
-                         .about("translate all mapping documents under the given folder")
+                         .about("translate the mapping documents under the given folder: its .ttl files, or its .shexml files for ShExML")
                          .arg(arg!(<FOLDER> "the folder containing several mapping documents"))
                          .arg_required_else_help(true))
             .subcommand(Command::new("stdin")
-                         .about("translate all input from stdin"))
+                         .about("translate the mapping document on stdin and write the plan to stdout"))
             .arg(arg!(-d --debug ...  "Turns on debugging and logging to file"))
-            .arg(arg!(-j --json ... "Only generate dot files in JSON format"))
+            .arg(arg!(-j --json ... "Only write the plan as JSON, without the DOT file"))
             .arg(arg!(-p --pretty ... "Pretty print output"))
-            .arg(arg!(-o --outputFolderSuffix <OUTPUT_FOLDER_SUFFIX> "The output folder suffix"));
+            .arg(arg!(--language <LANGUAGE> "The language of the mapping: rml-kgc, rml-io, r2rml or shexml"))
+            .arg(arg!(--"base-iri" <IRI> "The base IRI of every triples map without rml:baseIRI (default: the mapping's @base)"))
+            .arg(arg!(--optimizer <TOGGLE> "Switches an optimizer rule on or off, as <RULE>=true or <RULE>=false")
+                         .action(ArgAction::Append))
+            .arg(arg!(--options <FILE> "A JSON file with the options object; the flags above override it"))
+            .arg(arg!(--report "Write the result document (the plan or the errors, and the warnings) instead of the bare plan"));
 
         Self { cmd }
     }

@@ -13,20 +13,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `algemaploom-plan` crate: the plans of the canonical pipeline, independent of any mapping language, serialized with a schema version and producer, and their JSON Schema in `schema/plan.schema.json`, which the Java jar also ships (see HANDBOOK: The canonical pipeline).
 - `normalizer`: the RML-KGC core rule set, `normalize_kgc`, with links from the normal form to the original document (`nf:origin`), which name its blank nodes by skolem IRIs from their canonical labels.
 - `pipeline-test` crate: test harness of the canonical pipeline, with graph cases for normalizer rules and plan snapshots validated against the plan schema.
+- Translation requests and results (see HANDBOOK: Requests, results and errors): the caller names the language (`rml-kgc`, `rml-io` or `shexml`; `r2rml` has no translator yet) and may set the processor's base IRI and optimizer toggles; a translation gives a plan with warnings, or error records with a kind, a code and, for Turtle syntax errors, a location, also for a panic. `translator-bin` takes `--language`, `--base-iri`, `--optimizer`, `--options` and `--report`, and exits with 1 when the mapping can't be translated, 2 for usage and request errors, 3 for internal ones.
+- `optimizer` crate: the optimizer framework of the canonical pipeline, with a `Rule` trait and per-rule toggles; it has no rules yet.
+- The Java jar carries the native libraries for macOS (x86_64 and aarch64), cross-compiled with cargo-zigbuild.
 
 ### Changed
+- **Breaking:** the Java binding's `ITranslator.translate(mapping, Options)` returns a `Translation` (`plan()`, `warnings()`) and throws a `TranslationException` with the error records, through the native method `translateJson`; its `Cli` takes the language as its first argument.
+- **Breaking:** the Python binding's `translate(mapping, options)` returns a `Translation` (`.plan`, `.warnings`) and raises `TranslationError` (`.errors`, `.warnings`); the Node.js binding's `translate(mapping, options)` returns `{plan, warnings}` and throws an `Error` named `TranslationError`.
+- `translator-bin` is in its own crate, `translator-cli`, so the bindings' libraries leave out the CLI's dependencies; `normalizer` uses the logger in its example only.
+- `translator-bin folder` translates the `.ttl` files, or the `.shexml` files for ShExML.
+- `translator_new_rml::extractors::io::parse_str` takes the processor's base IRI.
+- CI: the jobs that build the Java binding share the native toolchains (`.native-targets`, `.apple-targets` for the jobs whose jar ships), and `build_native.sh` stops at the first failure; `bump-version.sh` updates `Cargo.lock` with `cargo update --workspace`.
 - Java lib: don't build fat jar.
-- Java lib: between releases the Maven version is the next patch `-SNAPSHOT` (now `0.8.1-SNAPSHOT`); `bump-version.sh` sets it after each release.
+- Between releases the crates, the Java binding and the Node.js package carry the next patch `-SNAPSHOT` version; `bump-version.sh` sets it after each release.
 - `translator_new_rml`'s tests against stored plans are plan snapshots (`plan_snapshots`, was `regression_tests`): they detect a change in a plan, and the conformance job checks whether a plan is right.
 - `sparql-sat-checker` is marked unmaintained, and its crate documentation lists its known defects.
 - `translator_new_rml`: an operator translator that looks up other mapping parts implements `StoreOperatorTranslator::translate_with_store` (extend, join, serializer); `OperatorTranslator::translate` is required for the others (see HANDBOOK: How a mapping becomes a plan)
 
 ### Fixed
+- The Python module is `ltranslator`, the name that `build_python.sh` installs it under.
 - `translator-bin stdin` and the Java binding's `Cli` read the mapping with its line breaks, so a Turtle comment ends at its line.
 - `translator_new_rml`: the serializer assigns graphs per predicate-object map (the subject map's graphs plus its own, the default graph when there are none), so a graph map of one predicate-object map no longer moves the triples of the others.
 - `translator_new_rml`: a predicate-object map with several `rml:objectMap` or `rml:object` values keeps all of them in the plan.
 
 ### Removed
+- `translator`: `api::process_one_file`, `api::process_one_str`, `TranslatorHandler`, the `error` and `util` modules, and the guess of the RML translator from the R2RML namespace; `translator-bin -o/--outputFolderSuffix`, which had no effect.
 - `SearchStore` fields and methods that nothing used: `reference_attr_map`, `add_reference_name`, `abs_ls_search_map`, `pm_search_map`, `om_search_map` and `gm_search_map`
 - Commented-out `FileTranslatorHandler` implementation in `translator::rml`
 - `normalizer.py`, a Python copy of the RML.io rule set

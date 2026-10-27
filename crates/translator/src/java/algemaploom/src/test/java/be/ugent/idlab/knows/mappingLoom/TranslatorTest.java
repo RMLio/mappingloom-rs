@@ -1,6 +1,10 @@
 package be.ugent.idlab.knows.mappingLoom;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+
+import java.util.List;
 
 import org.junit.Test;
 
@@ -72,10 +76,9 @@ public class TranslatorTest
             """;
 
     @Test
-    public void testTranslateShExML()
+    public void testTranslateShExML() throws TranslationException
     {
-        Translator translator = new Translator();
-        String out = translator.translate_to_document(SHEXML_EXAMPLE);
+        String out = new Translator().translate(SHEXML_EXAMPLE, new Options("shexml")).plan();
         assertTrue(out.contains("<http://example.com/name>"));
         assertTrue(out.contains("<http://example.com/year>"));
         assertTrue(out.contains("<http://example.com/country>"));
@@ -83,15 +86,43 @@ public class TranslatorTest
     }
 
     @Test
-    public void testTranslateRML()
+    public void testTranslateRML() throws TranslationException
     {
-        Translator translator = new Translator();
-        String out = translator.translate_to_document(RML_EXAMPLE);
+        Translation translation = new Translator().translate(RML_EXAMPLE, new Options("rml-io"));
 
+        String out = translation.plan();
         assertTrue(out.contains("Source_0"));
         assertTrue(out.contains("ProjectionOp_1"));
         assertTrue(out.contains("ExtendOp_2"));
         assertTrue(out.contains("Serialize_3"));
         assertTrue(out.contains("Sink_4"));
+        assertEquals(List.of(), translation.warnings());
+    }
+
+    @Test
+    public void testBaseIriOption() throws TranslationException
+    {
+        String out = new Translator().translate(RML_EXAMPLE, new Options("rml-io").withBaseIri("http://other.org/")).plan();
+        assertTrue(out.contains("http://other.org/"));
+    }
+
+    @Test
+    public void testSyntaxErrorThrowsWithItsLocation()
+    {
+        TranslationException e = assertThrows(TranslationException.class,
+                () -> new Translator().translate("<a> <b> .", new Options("rml-kgc")));
+        ErrorRecord error = e.errors().get(0);
+        assertEquals("syntax", error.kind());
+        assertEquals("invalid-turtle", error.code());
+        assertEquals(1, error.location().line());
+    }
+
+    @Test
+    public void testUnknownLanguageIsRequestError()
+    {
+        TranslationException e = assertThrows(TranslationException.class,
+                () -> new Translator().translate(RML_EXAMPLE, new Options("rml")));
+        assertEquals("request", e.errors().get(0).kind());
+        assertEquals("invalid-options", e.errors().get(0).code());
     }
 }

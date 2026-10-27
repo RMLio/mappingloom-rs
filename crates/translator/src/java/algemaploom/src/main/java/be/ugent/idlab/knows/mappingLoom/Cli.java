@@ -1,44 +1,46 @@
 package be.ugent.idlab.knows.mappingLoom;
 import java.io.*;
 
+/**
+ * Translates the mapping of a file, or of standard input, and prints the plan. The exit codes are those of
+ * translator-bin: 1 for a mapping that can't be translated, 2 for usage and request errors, 3 for internal ones.
+ */
 class Cli {
-    private static final int NOT_FOUND_ERROR = 1;
     private static final int INVALID_ARGUMENT_ERROR = 2;
-    private static final int READING_ERROR = 3;
 
     public static void main(String[] args) throws IOException {
-        BufferedReader in = null;
-	    Translator translator = new Translator();
-        String mapping = "";
-
-        /* Parse CLI arguments */
-        if (args.length == 0) {
-            in = new BufferedReader(new InputStreamReader(System.in));
-        } else if (args.length == 1) {
-            try {
-                in = new BufferedReader(new FileReader(args[0]));
-            } catch (FileNotFoundException e) {
-                System.err.println("File not found: " + args[0]);
-                System.exit(NOT_FOUND_ERROR);
-            }
-        } else {
-            System.err.println("Usage: java -jar algemaploom-<VERSION>-jar-with-dependencies.jar <mapping> or pipe mapping via stdin");
+        if (args.length < 1 || args.length > 2) {
+            System.err.println("Usage: java -jar MappingLoom-<VERSION>.jar <language> [<mapping>]: the language is rml-kgc, rml-io, r2rml or shexml; without a mapping file, the mapping is read from stdin");
             System.exit(INVALID_ARGUMENT_ERROR);
         }
 
-        /* Translate */
-        try {
+        String mapping;
+        try (Reader in = args.length == 1 ? new InputStreamReader(System.in) : new FileReader(args[1])) {
             StringWriter content = new StringWriter();
             in.transferTo(content);
             mapping = content.toString();
         } catch (IOException e) {
             System.err.println("Reading mapping failed: " + e);
-            System.exit(READING_ERROR);
-        } finally {
-            in.close();
+            System.exit(INVALID_ARGUMENT_ERROR);
+            return;
         }
 
-        String translation = translator.translate_to_document(mapping);
-        System.out.println(translation);
+        try {
+            Translation translation = new Translator().translate(mapping, new Options(args[0]));
+            translation.warnings().forEach(System.err::println);
+            System.out.println(translation.plan());
+        } catch (TranslationException e) {
+            e.warnings().forEach(System.err::println);
+            e.errors().forEach(System.err::println);
+            System.exit(exitCode(e));
+        }
+    }
+
+    static int exitCode(TranslationException e) {
+        return e.errors().stream().mapToInt(error -> switch (error.kind()) {
+            case "request" -> INVALID_ARGUMENT_ERROR;
+            case "internal" -> 3;
+            default -> 1;
+        }).max().orElse(1);
     }
 }

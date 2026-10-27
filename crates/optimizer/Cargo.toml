@@ -1,0 +1,8 @@
+[package]
+name = "optimizer"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+algemaploom-plan = { path = "../algemaploom-plan/" }

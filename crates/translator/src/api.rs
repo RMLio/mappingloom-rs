@@ -1,96 +1,302 @@
-use std::error::Error;
-use std::fs;
-use std::path::PathBuf;
+use std::any::Any;
+use std::panic::{self, AssertUnwindSafe};
 
-use crate::handler::TranslatorHandler;
-use crate::rml::RMLHandler;
-use crate::shexml::ShExMLHandler;
-use crate::util::{pretty_print_err, serialize_and_log_msg};
-use log::error;
-use plan::states::Init;
-use plan::Plan;
+use optimizer::Optimizer;
+use oxiri::Iri;
+use oxttl::TurtleParser;
 
-pub fn process_one_file(
-    file_path: PathBuf,
-    output_prefix: Option<String>,
-    json_only_flag: bool,
-    pretty: bool,
-) {
-    let mapping_str_res = fs::read_to_string(&file_path);
-    match mapping_str_res {
-        Ok(mapping) => {
-            if let Some(plan) = process(&mapping) {
-                if let Err(err) = serialize_and_log_msg(
-                    output_prefix.clone().unwrap(),
-                    &plan,
-                    file_path.to_string_lossy(),
-                    json_only_flag,
-                    pretty,
-                ) {
-                    error!(
-                        "Errored while serializing mapping plan for: {}",
-                        file_path.to_string_lossy()
-                    );
-                    pretty_print_err(&err);
-                }
-            } 
-        },
-        Err(err) => {
-            error!("Errored while reading file: {}", file_path.to_string_lossy());
-            pretty_print_err(&err);
-        },
+use crate::report::{
+    result_document, Kind, Location, Record, Translation, TranslationErrors,
+};
+use crate::request::{Language, Options};
+use crate::{rml, shexml};
+
+/// Translates a mapping document in the language that `options` names. A
+/// panic becomes an internal error, so every caller sees a plan or errors.
+pub fn translate(
+    mapping: &str,
+    options: &Options,
+) -> Result<Translation, TranslationErrors> {
+    guarded(|| translate_unguarded(mapping, options))
+}
+
+fn guarded(
+    translate: impl FnOnce() -> Result<Translation, TranslationErrors>,
+) -> Result<Translation, TranslationErrors> {
+    panic::catch_unwind(AssertUnwindSafe(translate)).unwrap_or_else(|payload| {
+        Err(Record::new(Kind::Internal, "panic", panic_message(payload)).into())
+    })
+}
+
+/// Translates a mapping document with the options object as JSON text, and
+/// returns the result document as JSON text: the entry point of the
+/// bindings.
+pub fn translate_json(mapping: &str, options: &str) -> String {
+    let result = Options::from_json(options)
+        .and_then(|options| translate(mapping, &options));
+    result_document(&result).to_string()
+}
+
+fn translate_unguarded(
+    mapping: &str,
+    options: &Options,
+) -> Result<Translation, TranslationErrors> {
+    // The canonical pipeline applies the optimizer; until it exists, the
+    // toggles are only checked.
+    Optimizer::new(&options.optimizer).map_err(|err| {
+        Record::new(Kind::Request, "unknown-rule", err.to_string())
+    })?;
+    if let Some(base_iri) = &options.base_iri {
+        Iri::parse(base_iri.as_str()).map_err(|err| {
+            Record::new(
+                Kind::Request,
+                "invalid-base-iri",
+                format!("the base IRI {base_iri} is no absolute IRI: {err}"),
+            )
+        })?;
+    }
+
+    let base_iri = options.base_iri.as_deref();
+    let mut warnings = Vec::new();
+    if options.language == Language::Shexml && base_iri.is_some() {
+        warnings.push(Record::new(
+            Kind::Request,
+            "ignored-option",
+            "ShExML has no base IRI: base_iri is ignored".to_string(),
+        ));
+    }
+    let invalid_mapping = |err: Box<dyn std::error::Error>| {
+        vec![Record::from_error(
+            Kind::Mapping,
+            "invalid-mapping",
+            err.as_ref(),
+        )]
+    };
+    let plan = match options.language {
+        Language::RmlKgc | Language::RmlIo => {
+            let translate_rml = if options.language == Language::RmlKgc {
+                rml::translate_kgc
+            } else {
+                rml::translate_rml_io
+            };
+            check_turtle(mapping).and_then(|document_base| {
+                translate_rml(mapping, base_iri.or(document_base.as_deref()))
+                    .map_err(invalid_mapping)
+            })
+        }
+        Language::R2rml => Err(vec![Record::new(
+            Kind::Unsupported,
+            "unsupported-language",
+            "no translator reads R2RML's logical tables yet; an RML.io \
+             mapping takes the language rml-io"
+                .to_string(),
+        )]),
+        Language::Shexml => shexml::parse(mapping)
+            .map_err(|err| {
+                vec![Record::from_error(
+                    Kind::Syntax,
+                    "invalid-shexml",
+                    err.as_ref(),
+                )]
+            })
+            .and_then(|document| {
+                shexml::translate(document).map_err(invalid_mapping)
+            }),
+    };
+    match plan {
+        Ok(plan) => Ok(Translation { plan, warnings }),
+        Err(errors) => Err(TranslationErrors { errors, warnings }),
     }
 }
 
-pub fn process_one_str(mapping: &str) -> Option<String> {
-    process(mapping)
-        .map_or(None, |plan| Some(plan.to_json_string().unwrap()))
+/// Reports every Turtle syntax error, with its location, or returns the
+/// document's `@base`. The translators resolve the relative IRIs of the
+/// document against its `@base` only, so a relative IRI in a document
+/// without one is an error here too.
+fn check_turtle(mapping: &str) -> Result<Option<String>, Vec<Record>> {
+    let mut parser = TurtleParser::new().for_slice(mapping.as_bytes());
+    let errors: Vec<Record> = parser
+        .by_ref()
+        .filter_map(Result::err)
+        .map(|err| {
+            let start = err.location().start;
+            Record {
+                location: Some(Location {
+                    line: start.line + 1,
+                    column: start.column + 1,
+                }),
+                ..Record::new(
+                    Kind::Syntax,
+                    "invalid-turtle",
+                    err.message().to_string(),
+                )
+            }
+        })
+        .collect();
+    if errors.is_empty() {
+        Ok(parser.base_iri().map(str::to_string))
+    } else {
+        Err(errors)
+    }
 }
 
-fn process(mapping: &str) -> Option<Plan<Init>> {
-    let handlers: Vec<Box<dyn TranslatorHandler>> =
-        vec![Box::new(RMLHandler), Box::new(ShExMLHandler)];
-    let mut error_messages: Vec<String> = Vec::new();
+fn panic_message(payload: Box<dyn Any + Send>) -> String {
+    payload
+        .downcast_ref::<&str>()
+        .map(|message| message.to_string())
+        .or_else(|| payload.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "the translator panicked".to_string())
+}
 
-    let (generated_plans, generated_errors_res): (Vec<_>, Vec<_>) = handlers
-        .iter()
-        .map(|handler| handler.translate(mapping))
-        .partition(|plan| plan.is_ok());
+#[cfg(test)]
+mod tests {
+    use serde_json::{json, Value};
 
-    if generated_plans.is_empty() {
-        if !generated_errors_res.is_empty() {
-            error!("Errored while translating from stdin");
+    use super::*;
+
+    /// An RML-KGC mapping that declares the R2RML namespace, which the
+    /// language option keeps on the RML-KGC translator.
+    const KGC: &str = r#"
+@prefix rml: <http://w3id.org/rml/> .
+@prefix rr: <http://www.w3.org/ns/r2rml#> .
+@base <http://example.com/base/> .
+
+<TriplesMap1> a rml:TriplesMap ;
+  rml:logicalSource [
+    rml:source [ a rml:RelativePathSource ; rml:path "student.csv" ] ;
+    rml:referenceFormulation rml:CSV
+  ] ;
+  rml:subjectMap [ rml:template "{Name}" ] ;
+  rml:predicateObjectMap [
+    rml:predicate <http://xmlns.com/foaf/0.1/name> ;
+    rml:objectMap [ rml:reference "Name" ]
+  ] .
+"#;
+
+    fn plan_json(mapping: &str, options: Value) -> String {
+        let options = Options::from_value(options).unwrap();
+        translate(mapping, &options)
+            .unwrap()
+            .plan
+            .to_json_string()
+            .unwrap()
+    }
+
+    #[test]
+    fn the_language_option_picks_the_translator() {
+        let plan = plan_json(KGC, json!({"language": "rml-kgc"}));
+        assert!(plan.contains("student.csv"), "{plan}");
+        let errors =
+            translate(KGC, &Options::new(Language::RmlIo)).unwrap_err();
+        assert_eq!(errors.errors[0].kind, Kind::Mapping);
+        assert_eq!(errors.errors[0].code, "invalid-mapping");
+    }
+
+    #[test]
+    fn the_base_iri_option_replaces_the_base_directive() {
+        let plan = plan_json(KGC, json!({"language": "rml-kgc"}));
+        assert!(plan.contains(r#""base_iri":"http://example.com/base/""#));
+        let plan = plan_json(
+            KGC,
+            json!({"language": "rml-kgc", "base_iri": "http://other.org/"}),
+        );
+        assert!(plan.contains(r#""base_iri":"http://other.org/""#), "{plan}");
+        assert!(!plan.contains("http://example.com/base/"));
+    }
+
+    #[test]
+    fn a_turtle_error_has_a_location() {
+        let mapping = r#"@prefix rml: <http://w3id.org/rml/> .
+<http://example.com/a> rml:x "\a" ."#;
+        let errors =
+            translate(mapping, &Options::new(Language::RmlKgc)).unwrap_err();
+        assert_eq!(errors.errors.len(), 1);
+        assert_eq!(errors.errors[0].kind, Kind::Syntax);
+        assert_eq!(errors.errors[0].code, "invalid-turtle");
+        assert_eq!(
+            errors.errors[0].location,
+            Some(Location {
+                line: 2,
+                column: 31,
+            })
+        );
+    }
+
+    #[test]
+    fn a_relative_iri_without_base_is_a_turtle_error() {
+        let mapping = KGC.replace("@base <http://example.com/base/> .", "");
+        let errors =
+            translate(&mapping, &Options::new(Language::RmlKgc)).unwrap_err();
+        assert_eq!(errors.errors[0].code, "invalid-turtle");
+        assert_eq!(errors.errors[0].location.unwrap().line, 6);
+    }
+
+    #[test]
+    fn the_base_iri_option_is_an_absolute_iri() {
+        for base_iri in ["", "base/"] {
+            let options = Options {
+                base_iri: Some(base_iri.to_string()),
+                ..Options::new(Language::RmlKgc)
+            };
+            let errors = translate(KGC, &options).unwrap_err();
+            assert_eq!(errors.errors[0].code, "invalid-base-iri");
         }
-        generated_errors_res
-            .into_iter()
-            .flat_map(|pe| pe.err())
-            .enumerate()
-            .for_each(|(id, err)| {
-                error!("Handler is: {:?} ", handlers[id]);
-                let mut chain: Vec<String> = vec![format!("Error: {:#}", err)];
-                let mut idx: u32 = 0;
-                let mut current = err.source();
-                while let Some(inner) = current {
-                    chain.push(format!("{}: {:#}", idx, inner));
-                    idx += 1;
-                    current = inner.source();
-                }
-                error_messages.push(chain.join(" | "));
-                pretty_print_err(&err);
-            });
-    } else if let Some(plan) = generated_plans
-        .into_iter()
-        .flat_map(|p_res| p_res.ok())
-        .next()
-    {
-        return Some(plan);
-    };
+    }
 
-    let rust_logs = if error_messages.is_empty() {
-        "No error messages".to_string()
-    } else {
-        error_messages.join(" || ")
-    };
-    error!("Error messages: {}", rust_logs);
-    None
+    #[test]
+    fn r2rml_is_unsupported() {
+        let errors =
+            translate(KGC, &Options::new(Language::R2rml)).unwrap_err();
+        assert_eq!(errors.errors[0].kind, Kind::Unsupported);
+    }
+
+    #[test]
+    fn shexml_ignores_the_base_iri_with_a_warning() {
+        let options = Options {
+            base_iri: Some("http://example.com/".to_string()),
+            ..Options::new(Language::Shexml)
+        };
+        let errors = translate("not ShExML", &options).unwrap_err();
+        assert_eq!(errors.errors[0].kind, Kind::Syntax);
+        assert_eq!(errors.errors[0].code, "invalid-shexml");
+        assert_eq!(errors.warnings[0].code, "ignored-option");
+    }
+
+    #[test]
+    fn an_unknown_optimizer_rule_is_a_request_error() {
+        let result = translate_json(
+            KGC,
+            r#"{"language": "rml-kgc", "optimizer": {"R9": true}}"#,
+        );
+        let result: Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(result["errors"][0]["kind"], "request");
+        assert_eq!(result["errors"][0]["code"], "unknown-rule");
+    }
+
+    #[test]
+    fn the_result_document_holds_the_plan_or_the_errors() {
+        let result: Value = serde_json::from_str(&translate_json(
+            KGC,
+            r#"{"language": "rml-kgc"}"#,
+        ))
+        .unwrap();
+        assert_eq!(result["version"], algemaploom_plan::VERSION);
+        assert!(result["plan"]["nodes"].is_array(), "{result}");
+        assert_eq!(result["warnings"], json!([]));
+        assert!(result.get("errors").is_none());
+
+        let result: Value =
+            serde_json::from_str(&translate_json(KGC, "{}")).unwrap();
+        assert_eq!(result["errors"][0]["code"], "invalid-options");
+        assert!(result.get("plan").is_none());
+    }
+
+    #[test]
+    fn a_panic_is_an_internal_error() {
+        let errors = guarded(|| panic!("boom")).unwrap_err();
+        assert_eq!(
+            errors.errors,
+            vec![Record::new(Kind::Internal, "panic", "boom".to_string())]
+        );
+    }
 }

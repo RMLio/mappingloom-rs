@@ -51,11 +51,20 @@ python version >= 3.10 and the following packages:
    cd {repo dir}
    cargo build --release
    ```
-3. Run the CLI translator app from the compiled translator binary
+3. Run the CLI translator app from the compiled translator binary, with the
+   language of the mapping (`rml-kgc`, `rml-io`, `r2rml` or `shexml`)
    ```sh
    cd ./target/release/
-   ./translator-bin  file  <RML_DOCUMENT>
+   ./translator-bin --language rml-kgc file <RML_DOCUMENT>
    ```
+   `--base-iri` sets the base IRI of every triples map without `rml:baseIRI`
+   (by default the mapping's `@base`), and `--options <FILE>` reads these
+   options from a JSON object such as `{"language": "rml-kgc", "base_iri":
+   "http://example.com/"}`. The exit code is 0 for a plan, 1 when the mapping
+   can't be translated, 2 for usage errors and invalid options, and 3 for a
+   bug in the translator. The errors go to standard error; with `--report`,
+   the JSON output is the result document, with the plan or the errors, and
+   the warnings.
    For more information/options of CLI app:
    ```sh
    ./translator-bin  -h
@@ -109,14 +118,29 @@ The following features are not supported in translation yet:
 MappingLoom provides bindings for Java, Python and Node.js.
 These can be enabled with the features `jni`, `pyo3` and `neon` respectively.
 
+Each binding takes the mapping and the options, with the language required,
+and returns the plan as JSON text and the warnings, or raises an error that
+holds the error records:
+
+| Binding | Call | Error |
+|---|---|---|
+| Java (`be.ugent.idlab.knows:MappingLoom`) | `ITranslator.getInstance().translate(mapping, new Options("rml-kgc"))` returns a `Translation` (`plan()`, `warnings()`) | `TranslationException` (`errors()`, `warnings()`) |
+| Python (`ltranslator`) | `translate(mapping, {"language": "rml-kgc"})` returns a `Translation` (`.plan`, `.warnings`) | `TranslationError` (`.errors`, `.warnings`) |
+| Node.js | `translate(mapping, {language: "rml-kgc"})` returns `{plan, warnings}` | an `Error` named `TranslationError` (`.errors`, `.warnings`) |
+
 If you build from source, you can run the `build_java.sh`, `build_python.sh` and `build_nodejs.sh`
 scripts respectively.
 
-For cross-compiling Windows binaries from Linux you need to install the MinGW cross-compiler and have the correct build targets installed:
+The Java jar carries the native library for Linux, Windows and macOS (x86_64
+and aarch64). To cross-compile them from Linux you need the MinGW
+cross-compiler, [cargo-zigbuild](https://github.com/rust-cross/cargo-zigbuild)
+with zig (`pip install cargo-zigbuild ziglang`), and these build targets:
 - `x86_64-unknown-linux-gnu`
 - `x86_64-pc-windows-gnu`
+- `x86_64-apple-darwin`
+- `aarch64-apple-darwin`
 
-For usage, check out the [crates/translator/src/java](crates/translator/src/java), [crates/translator/src/python](crates/translator/src/python), and [crates/translator/src/nodejs](crates/translator/src/nodejs) folders.
+For examples, check out the command line scripts in [crates/translator/src/java](crates/translator/src/java), [crates/translator/src/python](crates/translator/src/python), and [crates/translator/src/nodejs](crates/translator/src/nodejs).
 
 ## Acknowledgement
 
