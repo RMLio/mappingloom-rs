@@ -31,6 +31,7 @@ impl Cli {
             .arg(arg!(-p --pretty ... "Pretty print output"))
             .arg(arg!(--language <LANGUAGE> "The language of the mapping: rml-kgc, rml-io, r2rml or shexml"))
             .arg(arg!(--"base-iri" <IRI> "The base IRI of every triples map without rml:baseIRI (default: the mapping's @base)"))
+            .arg(arg!(--translator <TRANSLATOR> "The translator of an rml-kgc mapping: legacy (default) or canonical"))
             .arg(arg!(--optimizer <TOGGLE> "Switches an optimizer rule on or off, as <RULE>=true or <RULE>=false")
                          .action(ArgAction::Append))
             .arg(arg!(--options <FILE> "A JSON file with the options object; the flags above override it"))

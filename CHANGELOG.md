@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pipeline-test` crate: test harness of the canonical pipeline, with graph cases for normalizer rules and plan snapshots validated against the plan schema.
 - Translation requests and results (see HANDBOOK: Requests, results and errors): the caller names the language (`rml-kgc`, `rml-io` or `shexml`; `r2rml` has no translator yet) and may set the processor's base IRI and optimizer toggles; a translation gives a plan with warnings, or error records with a kind, a code and, for Turtle syntax errors, a location, also for a panic. `translator-bin` takes `--language`, `--base-iri`, `--optimizer`, `--options` and `--report`, and exits with 1 when the mapping can't be translated, 2 for usage and request errors, 3 for internal ones.
 - `optimizer` crate: the optimizer framework of the canonical pipeline, with a `Rule` trait and per-rule toggles; it has no rules yet.
+- `translator_kgc` crate: the canonical RML-KGC translator, which normalizes a mapping and translates its triples maps into an `algemaploom-plan` plan, with templates, constants, references, term types, datatype and language maps, fresh blank nodes, graphs and file sources (see HANDBOOK: The canonical pipeline). The request option `"translator": "canonical"` (`translator-bin --translator canonical`, Java `Options.withTranslator`) selects it; joins, function executions, gather maps, star maps, logical targets, logical views and other sources are *unsupported* errors for now.
 - The Java jar carries the native libraries for macOS (x86_64 and aarch64), cross-compiled with cargo-zigbuild.
 
 ### Changed
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `translator-bin` is in its own crate, `translator-cli`, so the bindings' libraries leave out the CLI's dependencies; `normalizer` uses the logger in its example only.
 - `translator-bin folder` translates the `.ttl` files, or the `.shexml` files for ShExML.
 - `translator_new_rml::extractors::io::parse_str` takes the processor's base IRI.
+- The dev profile builds the dependencies and `translator` with `opt-level = 1`, so the bindings' debug library links on Windows (GNU).
 - CI: the jobs that build the Java binding share the native toolchains (`.native-targets`, `.apple-targets` for the jobs whose jar ships), and `build_native.sh` stops at the first failure; `bump-version.sh` updates `Cargo.lock` with `cargo update --workspace`.
 - Java lib: don't build fat jar.
 - Between releases the crates, the Java binding and the Node.js package carry the next patch `-SNAPSHOT` version; `bump-version.sh` sets it after each release.

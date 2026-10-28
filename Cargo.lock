@@ -2061,6 +2061,7 @@ dependencies = [
  "serde",
  "serde_json",
  "translator_api",
+ "translator_kgc",
  "translator_new_rml",
  "translator_rml",
  "translator_shexml",
@@ -2084,6 +2085,18 @@ name = "translator_api"
 version = "0.8.0"
 dependencies = [
  "plan",
+]
+
+[[package]]
+name = "translator_kgc"
+version = "0.8.0"
+dependencies = [
+ "algemaploom-plan",
+ "normalizer",
+ "oxigraph",
+ "oxilangtag",
+ "pipeline-test",
+ "serde_json",
 ]
 
 [[package]]

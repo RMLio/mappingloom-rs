@@ -10,7 +10,9 @@ use common::logger::init_logger;
 use log::{debug, error, info, warn};
 use serde_json::{Map, Value};
 use translator::api::translate;
-use translator::report::{result_document, Translation, TranslationErrors};
+use translator::report::{
+    result_document, TranslatedPlan, Translation, TranslationErrors,
+};
 use translator::request::{Language, Options};
 use walkdir::WalkDir;
 
@@ -115,6 +117,9 @@ fn options(matches: &ArgMatches) -> Result<Value, String> {
     if let Some(base_iri) = matches.get_one::<String>("base-iri") {
         options.insert("base_iri".into(), base_iri.clone().into());
     }
+    if let Some(translator) = matches.get_one::<String>("translator") {
+        options.insert("translator".into(), translator.clone().into());
+    }
     if let Some(toggles) = matches.get_many::<String>("optimizer") {
         let Value::Object(optimizer) = options
             .entry("optimizer")
@@ -167,9 +172,9 @@ fn emit(
         })
     } else if let Ok(translation) = result {
         Some(if output.pretty {
-            translation.plan.to_pretty_json_string().unwrap()
+            translation.plan.to_pretty_json_string()
         } else {
-            translation.plan.to_json_string().unwrap()
+            translation.plan.to_json_string()
         })
     } else {
         None
@@ -185,8 +190,8 @@ fn emit(
     code
 }
 
-/// Translates one file and writes `<output_prefix>.json` and, for a plan
-/// without `json_only`, `<output_prefix>.dot`. Returns the exit code.
+/// Translates one file and writes `<output_prefix>.json` and, for a legacy
+/// plan without `json_only`, `<output_prefix>.dot`. Returns the exit code.
 fn translate_file(
     file_path: &Path,
     output_prefix: &str,
@@ -212,12 +217,14 @@ fn translate_file(
         return code;
     }
     info!("Generated json file: {}", json_path.yellow());
-    if !output.json_only {
+    if let (false, TranslatedPlan::Legacy(plan)) =
+        (output.json_only, &translation.plan)
+    {
         let dot_path = format!("{output_prefix}.dot");
         let written = if output.pretty {
-            translation.plan.write_pretty(dot_path.clone().into())
+            plan.write_pretty(dot_path.clone().into())
         } else {
-            translation.plan.write(dot_path.clone().into())
+            plan.write(dot_path.clone().into())
         };
         if let Err(err) = written {
             error!("Errored while writing {dot_path}: {err:?}");

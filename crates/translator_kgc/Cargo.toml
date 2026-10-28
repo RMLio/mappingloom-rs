@@ -1,0 +1,15 @@
+[package]
+name = "translator_kgc"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+algemaploom-plan = { path = "../algemaploom-plan/" }
+normalizer = { path = "../normalizer/" }
+oxigraph = { version = "0.5.7", default-features = false }
+oxilangtag = "0.1.6"
+
+[dev-dependencies]
+pipeline-test = { path = "../pipeline-test/" }
+serde_json.workspace = true

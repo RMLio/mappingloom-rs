@@ -91,6 +91,7 @@ All crates live under `crates/` and are workspace members (`members = ["crates/*
 | `common` | Shared utilities such as the logger. |
 | `normalizer` | Normalizes a mapping with SPARQL Update rules over an Oxigraph store: the RML-KGC rule set of the canonical pipeline, and the paper's RML.io rule set (see The canonical pipeline). |
 | `translator_normalized_rml` | Translator for normalized RML documents. |
+| `translator_kgc` | The canonical RML-KGC translator: normalizes a mapping and translates the normal form into an `algemaploom-plan` plan (see The canonical pipeline). |
 | `algemaploom-plan` | The plans of the canonical pipeline: the IR's operators and functions, the plan document and its JSON Schema (see The canonical pipeline). |
 | `optimizer` | The optimizer of the canonical pipeline: the `Rule` trait, the rules in the order they run, and their toggles (see The canonical pipeline). |
 | `pipeline-test` | Test harness of the canonical pipeline: graph cases for normalizer rules, and plan snapshots validated against the plan schema. A dev-dependency only. |
@@ -152,6 +153,7 @@ object (`request::Options`), which is JSON in the bindings and in
 | `language` | `rml-kgc`, `rml-io`, `r2rml` or `shexml`; required |
 | `base_iri` | the processor's base IRI (see How a mapping becomes a plan) |
 | `optimizer` | an object from rule id to `true` or `false`; a rule without a toggle takes its default |
+| `translator` | `legacy` (default) or `canonical`, the canonical pipeline; `canonical` for `rml-kgc` only |
 
 `api::translate` returns a `Translation` (the plan and the warnings) or
 `TranslationErrors` (at least one error, and the warnings found before). A
@@ -170,15 +172,18 @@ underlying messages, outermost first). The kinds and their codes:
 
 | Kind | Code | Meaning |
 |---|---|---|
-| request | `invalid-options` | the options are no JSON object, or have an unknown key or value, or no language |
+| request | `invalid-options` | the options are no JSON object, or have an unknown key or value, or no language, or name the canonical translator for a language other than `rml-kgc` |
 | request | `invalid-base-iri` | `base_iri` is no absolute IRI |
 | request | `unknown-rule` | an optimizer toggle names no rule |
 | request | `ignored-option` (warning) | `base_iri` for ShExML, which has no base IRI |
-| syntax | `invalid-turtle` | the mapping is not valid Turtle; one record per error, with its location |
+| syntax | `invalid-turtle` | the mapping is not valid Turtle; one record per error, with its location (`api` checks the syntax first; `translator_kgc` called directly reports it without location) |
 | syntax | `invalid-shexml` | the mapping is not valid ShExML |
 | mapping | `invalid-mapping` | a legacy translator rejected the mapping; its messages are the causes |
+| mapping | `subject-maps`, `predicate-object-map`, `expressions`, `invalid-template`, `invalid-constant`, `constant-blank-node`, `invalid-term-type`, `no-expression`, `invalid-reference`, `datatype-and-language`, `datatype-or-language-without-literal`, `reference-without-logical-source` | the canonical translator rejected the mapping; the record's `origin` is the term map or triples map |
+| unsupported | `feature`, `source` | the canonical translator doesn't translate a join, function execution, gather map, star map, logical target, logical view or source other than a relative path yet |
 | unsupported | `unsupported-language` | the language has no translator yet (`r2rml`) |
 | internal | `panic` | the translator panicked |
+| internal | `normalizer` | the normalizer failed on a valid Turtle document |
 
 The *unsupported* kind (a valid mapping that the translator doesn't handle
 yet) stays apart from *mapping*, so that a conformance run can tell a real
@@ -191,10 +196,11 @@ code among its files.
 
 The canonical pipeline replaces `translator_new_rml` for RML-KGC in three
 stages: normalize, translate, optimize. It is built next to the legacy
-translators and nothing calls it yet. Its normalizer follows the normal form
+translators, and a request with `"translator": "canonical"` takes it. Its normalizer follows the normal form
 of Min & Hartig (Appendix A), adapted to RML-KGC.
 
-**Normalizer.** `normalizer::normalize_kgc(mapping, base_iri)` applies the
+**Normalizer.** `normalizer::normalize_kgc(mapping, base_iri)`, with the
+processor's base IRI if there is one, applies the
 rules of `kgc::RULES` in order and returns a `NormalForm`: the normalized
 graph, and the skolem IRI of each blank node of the original document. Each
 rule is one SPARQL Update request, except `same-source-joins`, which compares
@@ -243,12 +249,35 @@ pipeline reads:
   inlined, so it is evaluated as its parent's subject map: with the parent's
   base IRI and the parent's fresh blank nodes.
 
+**Translator.** `translator_kgc::translate` normalizes the mapping and
+translates each normalized triples map into one branch: a Source, an Extend
+that binds `subject`, `predicate`, `object` and, unless the graph is the
+default one, `graph`, a Project and a Serializer with one quad pattern,
+which writes to the default Target (Algorithm 1). A branch has its own
+Serializer, so that a quad pattern without graph is the default graph and a
+branch can route to its own targets. The Source has one field per distinct
+query of the branch's term maps (Algorithm 2), named `q:<query>`; a CSV
+column and a JSONPath without wildcard, recursive descent, filter, union or
+slice are single-valued. A term map is an expression (Algorithm 3, with the
+IR's corrections): a constant is the complete term, a template keeps its
+pieces and the encoding of its term type (IRI-safe for IRI, URI-safe for
+URI, none otherwise), a term map with term type BlankNode and no expression
+is a fresh blank node keyed by the term map's origin, and the term type
+wraps the rest: `Iri` with the triples map's base IRI, `BlankNode`, or
+`Literal` with its datatype or language map. An object map that
+`same-source-joins` inlined takes the base IRI and the fresh blank node key
+of its parent. The normal form has no order, so the branches and the errors
+are sorted by content, which gives the same plan on every run. The
+translator checks every term map and source of every triples map, and
+reports each error once, also when the copies of a triples map share it.
+A term map stops at its first error.
+
 **Optimizer.** The `optimizer` crate rewrites an `algemaploom-plan` plan
 with independent rules, each an implementation of `Rule` with an id (its
 toggle's key, R1 to R7) and a default. `optimizer::rules` lists them in the
 order they run, and `Optimizer::new` switches each on or off from the
 `optimizer` option, rejecting an unknown id. It has no rules yet, so a plan
-passes unchanged; `api::translate` checks the toggles.
+passes unchanged; `api::translate` optimizes every canonical plan.
 
 The processor's base IRI enters the store as `nf:processor rml:baseIRI <…>`
 for `base-iris`, and leaves it after the last rule. The RML.io rule set
@@ -278,6 +307,10 @@ field without `default` as required.
 - Build: `cargo build` (CI) or `cargo build --release` for the CLI in
   `target/release/translator-bin`.
 - Test: `cargo test --verbose --jobs 1 --workspace` (the CI command).
+- The dev profile builds the dependencies and `translator` with
+  `opt-level = 1`: unoptimized, they share their generic instantiations, and
+  the bindings' library then exports more symbols than a Windows (GNU) DLL
+  can hold, so the workspace build fails to link it.
 - Lint: `cargo clippy --workspace`. No clippy configuration file is checked in.
 - Format: `cargo fmt`. The format rules (80-column width, module-granular
   imports grouped std/external/crate, aligned struct fields and enum
@@ -338,6 +371,12 @@ The canonical pipeline's tests use the `pipeline-test` harness:
   rewrites the snapshots, and `UPDATE_SCHEMA=1 cargo test -p
   algemaploom-plan` rewrites the committed schema; review either diff as a
   fixture change.
+
+`translator_kgc/tests/core.rs` translates every RML-Core case of
+`translator_new_rml`'s `resources/test/rml-core-tests/` with the canonical
+translator, and compares the plan, or the errors, with its snapshot in
+`translator_kgc/tests/core/<case>.json` (`UPDATE_SNAPSHOTS=1` rewrites
+them).
 
 `translator_rml/resources/` holds RML v1 test mappings (`csv-testcases/`,
 `rml/`, `rmlmapper-custom/`, `rmlstreamer/`), and `translator_shexml/resources/test/`

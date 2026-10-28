@@ -10,7 +10,7 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
-use error::{NormalizerError, NormalizerResult};
+pub use error::{NormalizerError, NormalizerResult};
 use oxigraph::io::{RdfFormat, RdfParseError, RdfParser, RdfSerializer};
 use oxigraph::model::dataset::{
     CanonicalizationAlgorithm, CanonicalizationHashAlgorithm,
@@ -35,6 +35,16 @@ pub mod kgc;
 mod queries;
 
 pub const NF: &str = nf!();
+
+/// `nf:origin`: links a node that a rule creates to the node of the original
+/// document it stands for.
+pub const ORIGIN: NamedNodeRef<'static> =
+    NamedNodeRef::new_unchecked(concat!(nf!(), "origin"));
+
+/// `nf:parentTriplesMap`: marks an object map that `same-source-joins`
+/// inlined, with the parent triples map it comes from.
+pub const PARENT_TRIPLES_MAP: NamedNodeRef<'static> =
+    NamedNodeRef::new_unchecked(concat!(nf!(), "parentTriplesMap"));
 
 /// The namespace of the skolem IRIs of the original document's blank nodes.
 pub const GENID: &str =
@@ -63,10 +73,11 @@ pub struct NormalForm {
 }
 
 /// Normalizes an RML-KGC mapping in Turtle. `base_iri` is the processor's
-/// base IRI, which every triples map without `rml:baseIRI` takes.
+/// base IRI, which every triples map without `rml:baseIRI` takes; without
+/// it, those triples maps have no base IRI.
 pub fn normalize_kgc(
     mapping: &str,
-    base_iri: &str,
+    base_iri: Option<&str>,
 ) -> NormalizerResult<NormalForm> {
     apply(mapping, base_iri, kgc::RULES)
 }
@@ -74,26 +85,30 @@ pub fn normalize_kgc(
 /// Applies `rules` in order to a mapping in Turtle.
 pub fn apply(
     mapping: &str,
-    base_iri: &str,
+    base_iri: Option<&str>,
     rules: &[Rule],
 ) -> NormalizerResult<NormalForm> {
     let original: Graph = RdfParser::from_format(RdfFormat::Turtle)
         .for_slice(mapping)
         .map(|quad| quad.map(Triple::from).map_err(RdfParseError::from))
         .collect::<Result<_, _>>()?;
-    let processor = Quad::new(
-        NamedNodeRef::new_unchecked(concat!(nf!(), "processor")),
-        NamedNodeRef::new_unchecked("http://w3id.org/rml/baseIRI"),
-        NamedNode::new(base_iri)?,
-        GraphName::DefaultGraph,
-    );
+    let processor = base_iri.map(NamedNode::new).transpose()?.map(|base_iri| {
+        Quad::new(
+            NamedNodeRef::new_unchecked(concat!(nf!(), "processor")),
+            NamedNodeRef::new_unchecked("http://w3id.org/rml/baseIRI"),
+            base_iri,
+            GraphName::DefaultGraph,
+        )
+    });
     let store = Store::new()?;
     store.extend(
         original
             .iter()
             .map(|t| t.into_owned().in_graph(GraphName::DefaultGraph)),
     )?;
-    store.insert(&processor)?;
+    if let Some(processor) = &processor {
+        store.insert(processor)?;
+    }
     for rule in rules {
         log::debug!("Rule {}: {}", rule.id, rule.description);
         match rule.action {
@@ -101,16 +116,17 @@ pub fn apply(
             Action::Native(step) => step(&store)?,
         }
     }
-    store.remove(&processor)?;
+    if let Some(processor) = &processor {
+        store.remove(processor)?;
+    }
     let skolem = skolem_iris(&original);
-    let origin = NamedNodeRef::new_unchecked(concat!(nf!(), "origin"));
     let label = NamedNodeRef::new_unchecked(concat!(nf!(), "label"));
     let mut normalized = Graph::new();
     for quad in store.iter() {
         let mut triple = Triple::from(quad?);
         if let Term::BlankNode(node) = &triple.object {
             if let Some(iri) =
-                skolem.get(node).filter(|_| triple.predicate == origin)
+                skolem.get(node).filter(|_| triple.predicate == ORIGIN)
             {
                 normalized.insert(TripleRef::new(
                     iri,

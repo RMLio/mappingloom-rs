@@ -58,7 +58,9 @@ python version >= 3.10 and the following packages:
    ./translator-bin --language rml-kgc file <RML_DOCUMENT>
    ```
    `--base-iri` sets the base IRI of every triples map without `rml:baseIRI`
-   (by default the mapping's `@base`), and `--options <FILE>` reads these
+   (by default the mapping's `@base`), `--translator canonical` translates an
+   `rml-kgc` mapping with the canonical pipeline instead of the legacy
+   translator, and `--options <FILE>` reads these
    options from a JSON object such as `{"language": "rml-kgc", "base_iri":
    "http://example.com/"}`. The exit code is 0 for a plan, 1 when the mapping
    can't be translated, 2 for usage errors and invalid options, and 3 for a

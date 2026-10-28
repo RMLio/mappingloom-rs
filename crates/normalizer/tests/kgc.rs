@@ -7,7 +7,7 @@ use normalizer::{apply, kgc, normalize_kgc};
 use oxigraph::model::Term;
 use pipeline_test::{assert_graph_cases, parse_graph};
 
-const BASE: &str = "http://example.com/base/";
+const BASE: Option<&str> = Some("http://example.com/base/");
 
 fn cases(dir: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

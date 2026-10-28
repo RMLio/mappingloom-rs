@@ -129,8 +129,11 @@
           "description": "Per value, its lexical form as an IRI if it is an absolute one,\notherwise `base` followed by it; a data error if neither is valid.",
           "properties": {
             "base": {
-              "description": "The IRI that a relative value follows.",
-              "type": "string"
+              "description": "The IRI that a relative value follows; without it, only an\nabsolute value gives an IRI.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "inner": {
               "$ref": "#/$defs/Expression"
@@ -146,7 +149,6 @@
           "required": [
             "type",
             "inner",
-            "base",
             "kind"
           ],
           "type": "object"

@@ -22,7 +22,7 @@ fn translate(mut cx: FunctionContext) -> JsResult<JsObject> {
     {
         Ok(translation) => {
             let result = cx.empty_object();
-            let plan = cx.string(translation.plan.to_json_string().unwrap());
+            let plan = cx.string(translation.plan.to_json_string());
             result.set(&mut cx, "plan", plan)?;
             let warnings = records(&mut cx, &translation.warnings)?;
             result.set(&mut cx, "warnings", warnings)?;

@@ -107,6 +107,19 @@ public class TranslatorTest
     }
 
     @Test
+    public void testCanonicalTranslatorOption() throws TranslationException
+    {
+        String mapping = """
+                @prefix rml: <http://w3id.org/rml/> .
+                <http://example.com/tm> rml:subjectMap [ rml:constant <http://example.com/s> ] ;
+                  rml:predicateObjectMap [ rml:predicate <http://example.com/p> ; rml:object "o" ] .
+                """;
+        String out = new Translator().translate(mapping, new Options("rml-kgc").withTranslator("canonical")).plan();
+        assertTrue(out, out.contains("\"version\":\"1.0\""));
+        assertTrue(out, out.contains("OneRecord"));
+    }
+
+    @Test
     public void testSyntaxErrorThrowsWithItsLocation()
     {
         TranslationException e = assertThrows(TranslationException.class,

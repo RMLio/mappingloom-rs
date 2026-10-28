@@ -6,9 +6,10 @@ use oxiri::Iri;
 use oxttl::TurtleParser;
 
 use crate::report::{
-    result_document, Kind, Location, Record, Translation, TranslationErrors,
+    result_document, Kind, Location, Record, TranslatedPlan, Translation,
+    TranslationErrors,
 };
-use crate::request::{Language, Options};
+use crate::request::{Language, Options, Translator};
 use crate::{rml, shexml};
 
 /// Translates a mapping document in the language that `options` names. A
@@ -41,11 +42,19 @@ fn translate_unguarded(
     mapping: &str,
     options: &Options,
 ) -> Result<Translation, TranslationErrors> {
-    // The canonical pipeline applies the optimizer; until it exists, the
-    // toggles are only checked.
-    Optimizer::new(&options.optimizer).map_err(|err| {
+    let optimizer = Optimizer::new(&options.optimizer).map_err(|err| {
         Record::new(Kind::Request, "unknown-rule", err.to_string())
     })?;
+    if options.translator == Translator::Canonical
+        && options.language != Language::RmlKgc
+    {
+        return Err(Record::new(
+            Kind::Request,
+            "invalid-options",
+            "only rml-kgc has a canonical translator".to_string(),
+        )
+        .into());
+    }
     if let Some(base_iri) = &options.base_iri {
         Iri::parse(base_iri.as_str()).map_err(|err| {
             Record::new(
@@ -73,6 +82,20 @@ fn translate_unguarded(
         )]
     };
     let plan = match options.language {
+        Language::RmlKgc if options.translator == Translator::Canonical => {
+            check_turtle(mapping).and_then(|document_base| {
+                translator_kgc::translate(
+                    mapping,
+                    base_iri.or(document_base.as_deref()),
+                )
+                .map(|plan| {
+                    TranslatedPlan::Canonical(
+                        optimizer.optimize(plan).document(),
+                    )
+                })
+                .map_err(|errors| errors.iter().map(Record::from).collect())
+            })
+        }
         Language::RmlKgc | Language::RmlIo => {
             let translate_rml = if options.language == Language::RmlKgc {
                 rml::translate_kgc
@@ -81,6 +104,7 @@ fn translate_unguarded(
             };
             check_turtle(mapping).and_then(|document_base| {
                 translate_rml(mapping, base_iri.or(document_base.as_deref()))
+                    .map(TranslatedPlan::Legacy)
                     .map_err(invalid_mapping)
             })
         }
@@ -100,7 +124,9 @@ fn translate_unguarded(
                 )]
             })
             .and_then(|document| {
-                shexml::translate(document).map_err(invalid_mapping)
+                shexml::translate(document)
+                    .map(TranslatedPlan::Legacy)
+                    .map_err(invalid_mapping)
             }),
     };
     match plan {
@@ -175,11 +201,7 @@ mod tests {
 
     fn plan_json(mapping: &str, options: Value) -> String {
         let options = Options::from_value(options).unwrap();
-        translate(mapping, &options)
-            .unwrap()
-            .plan
-            .to_json_string()
-            .unwrap()
+        translate(mapping, &options).unwrap().plan.to_json_string()
     }
 
     #[test]
@@ -241,6 +263,37 @@ mod tests {
             let errors = translate(KGC, &options).unwrap_err();
             assert_eq!(errors.errors[0].code, "invalid-base-iri");
         }
+    }
+
+    #[test]
+    fn the_canonical_translator_gives_a_plan_document() {
+        let plan: Value = serde_json::from_str(&plan_json(
+            KGC,
+            json!({"language": "rml-kgc", "translator": "canonical"}),
+        ))
+        .unwrap();
+        assert_eq!(plan["version"], algemaploom_plan::VERSION);
+        assert_eq!(plan["nodes"][1]["operator"]["type"], "SourceOp");
+
+        let options = Options {
+            translator: Translator::Canonical,
+            ..Options::new(Language::RmlIo)
+        };
+        let errors = translate(KGC, &options).unwrap_err();
+        assert_eq!(errors.errors[0].code, "invalid-options");
+    }
+
+    #[test]
+    fn a_canonical_translation_error_has_its_origin() {
+        let mapping = KGC.replace("{Name}", "{Name");
+        let options = Options {
+            translator: Translator::Canonical,
+            ..Options::new(Language::RmlKgc)
+        };
+        let errors = translate(&mapping, &options).unwrap_err();
+        assert_eq!(errors.errors[0].kind, Kind::Mapping);
+        assert_eq!(errors.errors[0].code, "invalid-template");
+        assert!(errors.errors[0].origin.is_some());
     }
 
     #[test]

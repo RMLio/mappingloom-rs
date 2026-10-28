@@ -9,6 +9,7 @@ algemaploom-plan = { path = "../algemaploom-plan/" }
 optimizer = { path = "../optimizer/" }
 plan = { path = "../plan/" }
 translator_api = { path = "../translator_api/" }
+translator_kgc = { path = "../translator_kgc/" }
 translator_rml = { path = "../translator_rml/" }
 translator_new_rml = { path = "../translator_new_rml/" }
 translator_shexml = { path = "../translator_shexml/" }

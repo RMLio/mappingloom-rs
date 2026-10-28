@@ -24,8 +24,10 @@ pub enum Expression {
     /// otherwise `base` followed by it; a data error if neither is valid.
     Iri {
         inner: Box<Expression>,
-        /// The IRI that a relative value follows.
-        base: String,
+        /// The IRI that a relative value follows; without it, only an
+        /// absolute value gives an IRI.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        base: Option<String>,
         kind: IriKind,
     },
     /// Per value, the blank node with its lexical form as identifier.

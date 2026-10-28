@@ -1,6 +1,16 @@
 [profile.release]
 opt-level = 3
 
+# Unoptimized crates share their generic instantiations, and the bindings'
+# library then exports more symbols than a Windows (GNU) DLL can hold. From
+# opt-level 1 they are not shared, so the dependencies and `translator` build
+# with it; the other workspace crates stay unoptimized for debugging.
+[profile.dev.package."*"]
+opt-level = 1
+
+[profile.dev.package.translator]
+opt-level = 1
+
 [workspace]
 members = ["crates/*"]
 resolver = "3"

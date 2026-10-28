@@ -102,8 +102,14 @@ pub fn assert_plan_snapshot(document: &PlanDocument, path: &Path) {
     let map = actual.as_object_mut().unwrap();
     map.remove("version");
     map.remove("producer");
+    assert_json_snapshot(&actual, path);
+}
+
+/// Asserts that a JSON value equals the snapshot at `path`.
+/// `UPDATE_SNAPSHOTS=1` writes the snapshot instead.
+pub fn assert_json_snapshot(actual: &Value, path: &Path) {
     if std::env::var_os("UPDATE_SNAPSHOTS").is_some() {
-        let text = serde_json::to_string_pretty(&actual).unwrap();
+        let text = serde_json::to_string_pretty(actual).unwrap();
         fs::write(path, text + "\n").unwrap();
     }
     let snapshot: Value = serde_json::from_str(
@@ -113,8 +119,8 @@ pub fn assert_plan_snapshot(document: &PlanDocument, path: &Path) {
     .unwrap();
     assert_eq!(
         actual,
-        snapshot,
-        "plan differs from {}; UPDATE_SNAPSHOTS=1 rewrites it",
+        &snapshot,
+        "JSON differs from {}; UPDATE_SNAPSHOTS=1 rewrites it",
         path.display()
     );
 }

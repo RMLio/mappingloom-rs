@@ -29,6 +29,19 @@ pub struct Options {
     /// toggle takes its default.
     #[serde(default)]
     pub optimizer: BTreeMap<String, bool>,
+    #[serde(default)]
+    pub translator: Translator,
+}
+
+/// Which translator an RML-KGC mapping takes.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Translator {
+    /// `translator_new_rml`.
+    #[default]
+    Legacy,
+    /// The canonical pipeline: normalize, translate, optimize.
+    Canonical,
 }
 
 impl Options {
@@ -37,6 +50,7 @@ impl Options {
             language,
             base_iri: None,
             optimizer: BTreeMap::new(),
+            translator: Translator::Legacy,
         }
     }
 
@@ -67,7 +81,8 @@ mod tests {
         let options = Options::from_value(json!({
             "language": "rml-kgc",
             "base_iri": "http://example.com/",
-            "optimizer": {"R1": false}
+            "optimizer": {"R1": false},
+            "translator": "canonical"
         }))
         .unwrap();
         assert_eq!(
@@ -76,6 +91,7 @@ mod tests {
                 language: Language::RmlKgc,
                 base_iri: Some("http://example.com/".to_string()),
                 optimizer: BTreeMap::from([("R1".to_string(), false)]),
+                translator: Translator::Canonical,
             }
         );
     }

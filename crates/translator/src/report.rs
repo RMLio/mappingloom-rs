@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fmt::Display;
 
+use algemaploom_plan::PlanDocument;
 use plan::states::Init;
 use plan::Plan;
 use serde::Serialize;
@@ -116,8 +117,37 @@ impl Display for Record {
 /// changed without failing.
 #[derive(Debug)]
 pub struct Translation {
-    pub plan: Plan<Init>,
+    pub plan: TranslatedPlan,
     pub warnings: Vec<Record>,
+}
+
+/// The plan of a legacy translator, or the plan document of the canonical
+/// pipeline.
+#[derive(Debug)]
+pub enum TranslatedPlan {
+    Legacy(Plan<Init>),
+    Canonical(PlanDocument),
+}
+
+impl TranslatedPlan {
+    pub fn to_json(&self) -> Value {
+        match self {
+            Self::Legacy(plan) => {
+                serde_json::from_str(&plan.to_json_string().unwrap()).unwrap()
+            }
+            Self::Canonical(document) => {
+                serde_json::to_value(document).unwrap()
+            }
+        }
+    }
+
+    pub fn to_json_string(&self) -> String {
+        self.to_json().to_string()
+    }
+
+    pub fn to_pretty_json_string(&self) -> String {
+        serde_json::to_string_pretty(&self.to_json()).unwrap()
+    }
 }
 
 /// A failed translation: at least one error, and the warnings found before.
@@ -131,6 +161,21 @@ impl TranslationErrors {
     /// The most severe kind among the errors.
     pub fn kind(&self) -> Kind {
         self.errors.iter().map(|error| error.kind).max().unwrap()
+    }
+}
+
+impl From<&translator_kgc::Error> for Record {
+    fn from(error: &translator_kgc::Error) -> Self {
+        let kind = match error.kind {
+            translator_kgc::ErrorKind::Syntax => Kind::Syntax,
+            translator_kgc::ErrorKind::Mapping => Kind::Mapping,
+            translator_kgc::ErrorKind::Unsupported => Kind::Unsupported,
+            translator_kgc::ErrorKind::Internal => Kind::Internal,
+        };
+        Self {
+            origin: error.origin.clone(),
+            ..Self::new(kind, error.code, error.message.clone())
+        }
     }
 }
 
@@ -165,12 +210,7 @@ pub fn result_document(
 ) -> Value {
     let (key, value, warnings) = match result {
         Ok(translation) => {
-            let plan = translation.plan.to_json_string().unwrap();
-            (
-                "plan",
-                serde_json::from_str(&plan).unwrap(),
-                &translation.warnings,
-            )
+            ("plan", translation.plan.to_json(), &translation.warnings)
         }
         Err(errors) => ("errors", json!(errors.errors), &errors.warnings),
     };

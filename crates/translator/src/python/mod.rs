@@ -37,7 +37,7 @@ fn translate(
         .and_then(|options| api::translate(mapping, &options))
     {
         Ok(translation) => Ok(Translation {
-            plan: translation.plan.to_json_string().unwrap(),
+            plan: translation.plan.to_json_string(),
             warnings: records(&translation.warnings)?.unbind(),
         }),
         Err(errors) => {

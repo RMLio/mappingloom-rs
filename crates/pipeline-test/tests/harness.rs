@@ -60,7 +60,7 @@ fn core_plan_is_valid() {
                             ],
                             encoding: Encoding::IriSafe,
                         }),
-                        base: "http://example.com/base/".into(),
+                        base: Some("http://example.com/base/".into()),
                         kind: IriKind::Iri,
                     },
                     origin: origin("http://example.com/base/sm"),
