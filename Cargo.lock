@@ -27,7 +27,7 @@ dependencies = [
 
 [[package]]
 name = "algemaploom-plan"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "petgraph",
  "schemars",
@@ -278,7 +278,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "log",
@@ -950,7 +950,7 @@ dependencies = [
 
 [[package]]
 name = "normalizer"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1053,7 +1053,7 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
 name = "operator"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "serde",
@@ -1062,7 +1062,7 @@ dependencies = [
 
 [[package]]
 name = "optimizer"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "algemaploom-plan",
 ]
@@ -1316,7 +1316,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pipeline-test"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "algemaploom-plan",
  "jsonschema",
@@ -1326,7 +1326,7 @@ dependencies = [
 
 [[package]]
 name = "plan"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "operator",
@@ -2047,7 +2047,7 @@ dependencies = [
 
 [[package]]
 name = "translator"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "algemaploom-plan",
  "jni",
@@ -2069,7 +2069,7 @@ dependencies = [
 
 [[package]]
 name = "translator-cli"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "clap",
  "colored",
@@ -2082,14 +2082,14 @@ dependencies = [
 
 [[package]]
 name = "translator_api"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "plan",
 ]
 
 [[package]]
 name = "translator_kgc"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "algemaploom-plan",
  "normalizer",
@@ -2101,7 +2101,7 @@ dependencies = [
 
 [[package]]
 name = "translator_new_rml"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "derive_more",
  "lazy_static",
@@ -2122,7 +2122,7 @@ dependencies = [
 
 [[package]]
 name = "translator_normalized_rml"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "lazy_static",
@@ -2136,7 +2136,7 @@ dependencies = [
 
 [[package]]
 name = "translator_rml"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "lazy_static",
  "log",
@@ -2155,7 +2155,7 @@ dependencies = [
 
 [[package]]
 name = "translator_shexml"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "chumsky",
  "either",
@@ -2262,7 +2262,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vocab"
-version = "0.8.0"
+version = "0.9.0"
 
 [[package]]
 name = "vsimd"

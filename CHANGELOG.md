@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.9.0] - 2026-11-04
+
 ### Added
 - Release tooling: `RELEASE.md` documents the steps; `bump-version.sh` checks the version format.
 - Manual `conformance` CI job: MappingWeaver, built with this translator, runs the kg-construct test suites; a regression against MappingWeaver's expected results fails it (see HANDBOOK: Conformance).
@@ -104,6 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SerializerOperatorTranslator`: don't apply graph mapping in case of a join because that's already handled by the `JoinTranslator`. Fixes <https://gitlab.ilabt.imec.be/rml/proc/algemaploom-rs/-/issues/47>
 - Use official rust Docker image in GitLab CI
 
+[0.9.0]: https://github.com/RMLio/mappingloom-rs/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/RMLio/mappingloom-rs/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/RMLio/mappingloom-rs/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/RMLio/mappingloom-rs/compare/v0.6.9...v0.7.0
