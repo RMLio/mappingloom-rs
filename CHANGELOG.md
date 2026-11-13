@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+- `RELEASE.md` documents deploying the Java binding to Maven Central by hand.
+
 ## [0.9.0] - 2026-11-04
 
 ### Added
