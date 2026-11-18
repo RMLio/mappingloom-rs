@@ -115,7 +115,8 @@ public class TranslatorTest
                   rml:predicateObjectMap [ rml:predicate <http://example.com/p> ; rml:object "o" ] .
                 """;
         String out = new Translator().translate(mapping, new Options("rml-kgc").withTranslator("canonical")).plan();
-        assertTrue(out, out.contains("\"version\":\"1.0\""));
+        // only a canonical plan carries a version, the algemaploom-rs version
+        assertTrue(out, out.contains("\"version\":\""));
         assertTrue(out, out.contains("OneRecord"));
     }
 
