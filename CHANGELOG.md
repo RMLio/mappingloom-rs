@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+- Maven Central deployments are named after the artifact and its version, such as `MappingLoom 0.10.1`.
+
 ## [0.10.0] - 2026-11-18
 
 ### Added
