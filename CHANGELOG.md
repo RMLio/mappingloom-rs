@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.10.0] - 2026-11-18
+
 ### Added
 - `RELEASE.md` documents deploying the Java binding to Maven Central by hand.
 - `translator_kgc` translates referencing object maps into an inner Join of the child's and the parent's Source on the child and parent maps of their join conditions, which compares lexical forms; without join conditions over another logical source, the Join gives the cartesian product (see HANDBOOK: The canonical pipeline). Plans have a Join operator, and Left and Right roles for its input edges.
@@ -118,6 +120,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SerializerOperatorTranslator`: don't apply graph mapping in case of a join because that's already handled by the `JoinTranslator`. Fixes <https://gitlab.ilabt.imec.be/rml/proc/algemaploom-rs/-/issues/47>
 - Use official rust Docker image in GitLab CI
 
+[0.10.0]: https://github.com/RMLio/mappingloom-rs/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/RMLio/mappingloom-rs/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/RMLio/mappingloom-rs/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/RMLio/mappingloom-rs/compare/v0.7.0...v0.7.1
