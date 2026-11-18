@@ -1,0 +1,319 @@
+{
+  "edges": [
+    {
+      "from": "Source_1",
+      "to": "Extend_2"
+    },
+    {
+      "from": "Source_3",
+      "to": "Rename_4"
+    },
+    {
+      "from": "Rename_4",
+      "to": "Extend_5"
+    },
+    {
+      "from": "Extend_2",
+      "role": "Left",
+      "to": "Join_6"
+    },
+    {
+      "from": "Extend_5",
+      "role": "Right",
+      "to": "Join_6"
+    },
+    {
+      "from": "Join_6",
+      "to": "Extend_7"
+    },
+    {
+      "from": "Extend_7",
+      "to": "Project_8"
+    },
+    {
+      "from": "Project_8",
+      "to": "Serializer_9"
+    },
+    {
+      "from": "Serializer_9",
+      "to": "Target_0"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "Target_0",
+      "operator": {
+        "config": {
+          "default": true
+        },
+        "type": "Target"
+      }
+    },
+    {
+      "id": "Source_1",
+      "operator": {
+        "config": {
+          "access": {
+            "path": "student.json",
+            "root": "MappingDirectory",
+            "type": "File"
+          },
+          "fields": [
+            {
+              "attribute": "q:$.ID",
+              "reference": "$.ID",
+              "single_valued": true
+            },
+            {
+              "attribute": "q:$.Name",
+              "reference": "$.Name",
+              "single_valued": true
+            },
+            {
+              "attribute": "q:$.Sport",
+              "reference": "$.Sport",
+              "single_valued": true
+            }
+          ],
+          "iterator": "$.students[*]",
+          "query_language": "http://w3id.org/rml/JSONPath"
+        },
+        "type": "Source"
+      },
+      "origin": [
+        "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n4"
+      ]
+    },
+    {
+      "id": "Extend_2",
+      "operator": {
+        "config": {
+          "pairs": [
+            {
+              "attribute": "subject",
+              "expression": {
+                "base": "http://example.com/base/",
+                "inner": {
+                  "encoding": "IriSafe",
+                  "pieces": [
+                    {
+                      "text": "http://example.com/Student/"
+                    },
+                    {
+                      "attribute": "q:$.ID"
+                    },
+                    {
+                      "text": "/"
+                    },
+                    {
+                      "attribute": "q:$.Name"
+                    }
+                  ],
+                  "type": "Template"
+                },
+                "type": "Iri"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n0"
+              ]
+            },
+            {
+              "attribute": "predicate",
+              "expression": {
+                "term": {
+                  "iri": "http://example.com/sameSportAs"
+                },
+                "type": "Constant"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n2"
+              ]
+            },
+            {
+              "attribute": "key:0",
+              "expression": {
+                "attribute": "q:$.Sport",
+                "type": "Reference"
+              },
+              "origin": [
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n1"
+              ]
+            }
+          ]
+        },
+        "type": "Extend"
+      }
+    },
+    {
+      "id": "Source_3",
+      "operator": {
+        "config": {
+          "access": {
+            "path": "student.json",
+            "root": "MappingDirectory",
+            "type": "File"
+          },
+          "fields": [
+            {
+              "attribute": "parent:q:$.ID",
+              "reference": "$.ID",
+              "single_valued": true
+            },
+            {
+              "attribute": "parent:q:$.Name",
+              "reference": "$.Name",
+              "single_valued": true
+            },
+            {
+              "attribute": "parent:q:$.Sport",
+              "reference": "$.Sport",
+              "single_valued": true
+            }
+          ],
+          "iterator": "$.students[*]",
+          "query_language": "http://w3id.org/rml/JSONPath"
+        },
+        "type": "Source"
+      },
+      "origin": [
+        "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n4"
+      ]
+    },
+    {
+      "id": "Rename_4",
+      "operator": {
+        "config": {
+          "pairs": [
+            {
+              "from": "#",
+              "to": "parent:#"
+            }
+          ]
+        },
+        "type": "Rename"
+      }
+    },
+    {
+      "id": "Extend_5",
+      "operator": {
+        "config": {
+          "pairs": [
+            {
+              "attribute": "parent:key:0",
+              "expression": {
+                "attribute": "parent:q:$.Sport",
+                "type": "Reference"
+              },
+              "origin": [
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n1"
+              ]
+            }
+          ]
+        },
+        "type": "Extend"
+      }
+    },
+    {
+      "id": "Join_6",
+      "operator": {
+        "config": {
+          "kind": "Inner",
+          "pairs": [
+            {
+              "left": "key:0",
+              "right": "parent:key:0"
+            }
+          ]
+        },
+        "type": "Join"
+      },
+      "origin": [
+        "http://example.com/base/RefObjectMap1"
+      ]
+    },
+    {
+      "id": "Extend_7",
+      "operator": {
+        "config": {
+          "pairs": [
+            {
+              "attribute": "object",
+              "expression": {
+                "base": "http://example.com/base/",
+                "inner": {
+                  "encoding": "IriSafe",
+                  "pieces": [
+                    {
+                      "text": "http://example.com/Student/"
+                    },
+                    {
+                      "attribute": "parent:q:$.ID"
+                    },
+                    {
+                      "text": "/"
+                    },
+                    {
+                      "attribute": "parent:q:$.Name"
+                    }
+                  ],
+                  "type": "Template"
+                },
+                "type": "Iri"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n2",
+                "http://example.com/base/RefObjectMap1",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n0"
+              ]
+            }
+          ]
+        },
+        "type": "Extend"
+      }
+    },
+    {
+      "id": "Project_8",
+      "operator": {
+        "config": {
+          "attributes": [
+            "subject",
+            "predicate",
+            "object"
+          ]
+        },
+        "type": "Project"
+      }
+    },
+    {
+      "id": "Serializer_9",
+      "operator": {
+        "config": {
+          "patterns": [
+            {
+              "object": {
+                "attribute": "object"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n2"
+              ],
+              "predicate": {
+                "attribute": "predicate"
+              },
+              "subject": {
+                "attribute": "subject"
+              }
+            }
+          ]
+        },
+        "type": "Serializer"
+      },
+      "origin": [
+        "http://example.com/base/TriplesMap1"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "code": "invalid-term-type",
+      "kind": "Mapping",
+      "message": "a Subject map can't have term type <http://w3id.org/rml/Literal>"
+    }
+  ]
+}

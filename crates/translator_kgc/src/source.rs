@@ -44,12 +44,12 @@ pub fn source(
     if mapping.object(logical_source, vocab::VIEW_ON).is_some() {
         return Err(unsupported("logical views are not translated yet".into()));
     }
-    only_known_properties(
-        mapping,
-        logical_source,
-        &[vocab::SOURCE, vocab::REFERENCE_FORMULATION, vocab::ITERATOR],
-    )
-    .map_err(unsupported)?;
+    mapping
+        .only_known_properties(
+            logical_source,
+            &[vocab::SOURCE, vocab::REFERENCE_FORMULATION, vocab::ITERATOR],
+        )
+        .map_err(unsupported)?;
     let source = mapping
         .node(logical_source, vocab::SOURCE)
         .filter(|source| {
@@ -60,12 +60,9 @@ pub fn source(
         .ok_or_else(|| {
             unsupported("only a relative path source is translated yet".into())
         })?;
-    only_known_properties(
-        mapping,
-        source,
-        &[vocab::PATH, vocab::ROOT, vocab::NULL],
-    )
-    .map_err(unsupported)?;
+    mapping
+        .only_known_properties(source, &[vocab::PATH, vocab::ROOT, vocab::NULL])
+        .map_err(unsupported)?;
     let path =
         string(mapping.object(source, vocab::PATH)).ok_or_else(|| {
             unsupported("a relative path source has a path".into())
@@ -130,24 +127,5 @@ fn single_valued(query_language: NamedNodeRef<'_>, query: &str) -> bool {
             .any(|part| query.contains(part))
     } else {
         false
-    }
-}
-
-/// Fails on a property that the translator doesn't read, so that none is
-/// dropped silently.
-fn only_known_properties(
-    mapping: &Mapping,
-    node: NamedOrBlankNodeRef<'_>,
-    known: &[NamedNodeRef<'_>],
-) -> Result<(), String> {
-    match mapping
-        .predicates(node)
-        .into_iter()
-        .find(|p| *p != rdf::TYPE && !known.contains(p))
-    {
-        Some(property) => {
-            Err(format!("the property {property} is not translated yet"))
-        }
-        None => Ok(()),
     }
 }

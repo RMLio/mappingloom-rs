@@ -1,19 +1,18 @@
-//! Algorithm 3: the expression of a term map, with the IR's corrections
-//! (D10): structured templates with the encoding of their term type, natural
-//! literals, datatype and language maps, every term type of RML-KGC, and
-//! fresh blank nodes.
+//! Algorithm 3: the expression of a term map, extended to RML-KGC with
+//! structured templates with the encoding of their term type,
+//! natural literals,
+//! datatype and language maps,
+//! every term type of RML-KGC,
+//! and fresh blank nodes.
 
 use std::collections::BTreeMap;
 
-use algemaploom_plan::{Encoding, Expression, IriKind, Piece, Term};
+use algemaploom_plan::{Encoding, Expression, Piece, Term};
 use oxigraph::model::vocab::xsd;
 use oxigraph::model::{NamedNodeRef, NamedOrBlankNodeRef, TermRef};
 
 use crate::mapping::{string, Mapping};
 use crate::{vocab, Error, ErrorKind};
-
-/// The attribute that a Source binds to a record's position.
-pub const INDEX: &str = "#";
 
 /// The position of a term map, which decides the terms it may give.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,34 +23,54 @@ pub enum Role {
     Graph,
     Datatype,
     Language,
+    /// A child or parent map of a join condition, whose values a Join
+    /// compares by lexical form.
+    Key,
 }
 
 /// What the term maps of one triples map share: the base IRI and the
 /// attributes of their queries, which become the fields of the Source
-/// (Algorithm 2).
+/// (Algorithm 2). Every attribute starts with `prefix`, so that the parent
+/// side of a join has attributes of its own.
 pub struct Context {
     pub base_iri: Option<String>,
+    pub prefix: &'static str,
     /// Each query with its attribute.
     pub queries: BTreeMap<String, String>,
 }
 
 impl Context {
+    pub fn new(base_iri: Option<String>, prefix: &'static str) -> Self {
+        Self {
+            base_iri,
+            prefix,
+            queries: BTreeMap::new(),
+        }
+    }
+
     fn attribute(&mut self, query: &str) -> String {
+        let prefix = self.prefix;
         self.queries
             .entry(query.to_string())
-            .or_insert_with(|| format!("q:{query}"))
+            .or_insert_with(|| format!("{prefix}q:{query}"))
             .clone()
+    }
+
+    /// The attribute of the Source's record position, `#`.
+    pub fn index(&self) -> String {
+        format!("{}#", self.prefix)
     }
 }
 
-/// The term map properties of later slices, with the feature each belongs
-/// to.
-const UNSUPPORTED: &[(NamedNodeRef<'static>, &str)] = &[
-    (vocab::PARENT_TRIPLES_MAP, "joins"),
-    (vocab::FUNCTION_EXECUTION, "function executions"),
-    (vocab::GATHER, "gather maps"),
-    (vocab::QUOTED_TRIPLES_MAP, "star maps"),
-    (vocab::LOGICAL_TARGET, "logical targets"),
+/// The RML properties of a term map that the translator reads; any other is
+/// reported unsupported, so that none is dropped silently.
+const KNOWN: &[NamedNodeRef<'static>] = &[
+    vocab::CONSTANT,
+    vocab::REFERENCE,
+    vocab::TEMPLATE,
+    vocab::TERM_TYPE,
+    vocab::DATATYPE_MAP,
+    vocab::LANGUAGE_MAP,
 ];
 
 /// The term types that give an IRI.
@@ -89,15 +108,9 @@ pub fn expression(
     };
     let mapping_error =
         |code, message: String| error(ErrorKind::Mapping, code, message);
-    for (property, feature) in UNSUPPORTED {
-        if mapping.object(map, *property).is_some() {
-            return Err(error(
-                ErrorKind::Unsupported,
-                "feature",
-                format!("{feature} are not translated yet"),
-            ));
-        }
-    }
+    mapping
+        .only_known_properties(map, KNOWN)
+        .map_err(|message| error(ErrorKind::Unsupported, "feature", message))?;
     let mut values = [vocab::CONSTANT, vocab::REFERENCE, vocab::TEMPLATE]
         .into_iter()
         .flat_map(|property| {
@@ -133,7 +146,7 @@ pub fn expression(
                 .unwrap_or(map);
             return Ok(Expression::FreshBlankNode {
                 key: mapping.origin(key),
-                index: vec![INDEX.into()],
+                index: vec![context.index()],
             });
         }
         None => {
@@ -176,7 +189,7 @@ pub fn expression(
         Expression::Template { pieces, encoding }
     });
     Ok(match term_type {
-        // A language map gives tags, not terms.
+        // A language map gives tags, and a join key the values it compares.
         None => *inner,
         Some(t) if t == vocab::BLANK_NODE => Expression::BlankNode { inner },
         Some(t) if t == vocab::LITERAL => {
@@ -193,18 +206,17 @@ pub fn expression(
                 language: sub_map(vocab::LANGUAGE_MAP, Role::Language)?,
             }
         }
-        Some(t) => Expression::Iri {
-            inner,
-            base: match parent {
+        Some(t) => {
+            let base = match parent {
                 Some(parent) => base_iri(mapping, parent),
                 None => context.base_iri.clone(),
-            },
-            kind: if t == vocab::URI || t == vocab::UNSAFE_URI {
-                IriKind::Uri
+            };
+            if t == vocab::URI || t == vocab::UNSAFE_URI {
+                Expression::Uri { inner, base }
             } else {
-                IriKind::Iri
-            },
-        },
+                Expression::Iri { inner, base }
+            }
+        }
     })
 }
 
@@ -226,7 +238,7 @@ fn term_type<'a>(
         Role::Subject | Role::Graph => &NODE_TYPES,
         Role::Predicate | Role::Datatype => &IRI_TYPES,
         Role::Object => &TERM_TYPES,
-        Role::Language => &[],
+        Role::Language | Role::Key => &[],
     };
     if let Some(t) = term_type.filter(|t| !allowed.contains(t)) {
         return Err(invalid(format!(
@@ -249,7 +261,7 @@ fn term_type<'a>(
         (Some(TermRef::Literal(_)), Some(t)) if t != vocab::LITERAL => {
             return Err(invalid(format!("a literal constant can't be a {t}")))
         }
-        (None, None) if role != Role::Language => {
+        (None, None) if !matches!(role, Role::Language | Role::Key) => {
             return Err(invalid(format!("a {role:?} map needs a term type")))
         }
         _ => {}
@@ -287,18 +299,20 @@ fn constant_term(constant: TermRef<'_>, role: Role) -> Result<Term, String> {
                 format!("{} is no language tag: {err}", literal.value())
             })?;
             Ok(Term::Literal {
-                value: literal.value().into(),
+                literal: literal.value().into(),
                 datatype: None,
                 language: None,
             })
         }
-        (TermRef::Literal(literal), Role::Object) => Ok(Term::Literal {
-            value: literal.value().into(),
-            datatype: (literal.language().is_none()
-                && literal.datatype() != xsd::STRING)
-                .then(|| literal.datatype().as_str().into()),
-            language: literal.language().map(str::to_string),
-        }),
+        (TermRef::Literal(literal), Role::Object | Role::Key) => {
+            Ok(Term::Literal {
+                literal: literal.value().into(),
+                datatype: (literal.language().is_none()
+                    && literal.datatype() != xsd::STRING)
+                    .then(|| literal.datatype().as_str().into()),
+                language: literal.language().map(str::to_string),
+            })
+        }
         (TermRef::Literal(literal), _) => Err(format!(
             "the literal {literal} can't be a {role:?} constant"
         )),

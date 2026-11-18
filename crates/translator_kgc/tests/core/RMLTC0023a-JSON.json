@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "code": "invalid-template",
+      "kind": "Mapping",
+      "message": "unmatched brace in http://example.com/{{Name}}"
+    }
+  ]
+}

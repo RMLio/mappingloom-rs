@@ -8,6 +8,7 @@ output/
 *.json
 !crates/algemaploom-plan/schema/*.json
 !crates/pipeline-test/tests/resources/*.json
+!crates/translator_kgc/tests/core/*.json
 
 test_resources/
 

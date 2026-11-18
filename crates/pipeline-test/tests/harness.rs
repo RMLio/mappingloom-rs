@@ -31,7 +31,7 @@ fn core_plan_is_valid() {
     };
     let mut plan = Plan::new();
     let source = plan.add(
-        Operator::SourceOp(SourceOp {
+        Operator::Source(SourceOp {
             access: Access::File {
                 path: "student.json".into(),
                 root: Root::MappingDirectory,
@@ -48,7 +48,7 @@ fn core_plan_is_valid() {
         vec!["http://example.com/base/ls".into()],
     );
     let extend = plan.add(
-        Operator::ExtendOp(ExtendOp {
+        Operator::Extend(ExtendOp {
             pairs: vec![
                 ExtendPair {
                     attribute: "s".into(),
@@ -61,7 +61,6 @@ fn core_plan_is_valid() {
                             encoding: Encoding::IriSafe,
                         }),
                         base: Some("http://example.com/base/".into()),
-                        kind: IriKind::Iri,
                     },
                     origin: origin("http://example.com/base/sm"),
                 },
@@ -81,13 +80,13 @@ fn core_plan_is_valid() {
         vec![],
     );
     let project = plan.add(
-        Operator::ProjectOp(ProjectOp {
+        Operator::Project(ProjectOp {
             attributes: vec!["s".into(), "o".into()],
         }),
         vec![],
     );
     let serializer = plan.add(
-        Operator::SerializerOp(SerializerOp {
+        Operator::Serializer(SerializerOp {
             patterns: vec![QuadPattern {
                 subject: attribute("s"),
                 predicate: Position::Constant {
@@ -104,7 +103,7 @@ fn core_plan_is_valid() {
         vec![tm.into()],
     );
     let target =
-        plan.add(Operator::TargetOp(TargetOp { default: true }), vec![]);
+        plan.add(Operator::Target(TargetOp { default: true }), vec![]);
     plan.connect(source, extend);
     plan.connect(extend, project);
     plan.connect(project, serializer);

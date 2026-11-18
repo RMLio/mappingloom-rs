@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "code": "invalid-turtle",
+      "kind": "Syntax",
+      "message": "error while parsing RDF data: Parser error at line 14 between columns 42 and 44: Unexpected escape character '\\a'"
+    }
+  ]
+}

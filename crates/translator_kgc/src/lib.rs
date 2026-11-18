@@ -1,11 +1,13 @@
-//! The canonical RML-KGC translator: it normalizes a mapping and translates
-//! the normal form into an `algemaploom-plan` plan, following Algorithms 1–3
-//! of Min & Hartig with the corrections of the IR (see HANDBOOK: The
-//! canonical pipeline).
+//! The canonical RML-KGC translator:
+//! it normalizes a mapping and translates the normal form into an `algemaploom-plan` plan,
+//! following Algorithms 1–3 of Min & Hartig, adapted to RML-KGC (see HANDBOOK: The canonical pipeline).
 //!
-//! Each normalized triples map becomes one branch: a Source, an Extend that
-//! binds its subject, predicate, object and graph, a Project and a
-//! Serializer, which writes to the default Target.
+//! Each normalized triples map becomes one branch:
+//! a Source,
+//! an Extend that binds its subject, predicate, object and graph
+//! (for a referencing object map, the object after a Join with the parent's Source),
+//! a Project
+//! and a Serializer, which writes to the default Target.
 
 mod mapping;
 mod source;
@@ -99,6 +101,11 @@ pub fn translate(
             Err(found) => errors.extend(found),
         }
     }
+    for triples_map in mapping.triples_maps_without_pom() {
+        errors.extend(
+            triples_map::check_subject_map(&mapping, triples_map).err(),
+        );
+    }
     // The normal form has no order, so errors and branches are sorted by
     // content to give the same result on every run.
     if !errors.is_empty() {
@@ -113,7 +120,7 @@ pub fn translate(
     branches.sort_by_cached_key(|branch| format!("{branch:?}"));
     let mut plan = Plan::new();
     let target =
-        plan.add(Operator::TargetOp(TargetOp { default: true }), vec![]);
+        plan.add(Operator::Target(TargetOp { default: true }), vec![]);
     for branch in branches {
         let serializer = branch.add_to(&mut plan);
         plan.connect(serializer, target);

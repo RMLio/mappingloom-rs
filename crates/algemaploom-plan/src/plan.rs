@@ -5,13 +5,13 @@ use schemars::JsonSchema;
 use serde::Serialize;
 
 use crate::operator::Operator;
-use crate::{PRODUCER, VERSION};
+use crate::VERSION;
 
-/// A plan under construction: a directed acyclic graph of operators. The
-/// builder adds what it is given and fuses nothing.
+/// A plan under construction: a directed acyclic graph of operators.
+/// The builder adds what it is given and fuses nothing.
 #[derive(Debug, Clone, Default)]
 pub struct Plan {
-    graph: StableDiGraph<(Operator, Vec<String>), ()>,
+    graph: StableDiGraph<(Operator, Vec<String>), Option<InputRole>>,
 }
 
 impl Plan {
@@ -30,7 +30,17 @@ impl Plan {
 
     /// Makes `from` an input of `to`.
     pub fn connect(&mut self, from: NodeIndex, to: NodeIndex) {
-        self.graph.add_edge(from, to, ());
+        self.graph.add_edge(from, to, None);
+    }
+
+    /// Makes `from` the input of `to` in `role`, the Left or Right input of a Join.
+    pub fn connect_as(
+        &mut self,
+        from: NodeIndex,
+        to: NodeIndex,
+        role: InputRole,
+    ) {
+        self.graph.add_edge(from, to, Some(role));
     }
 
     /// The plan document, with nodes and edges in the order they were added.
@@ -38,13 +48,14 @@ impl Plan {
         let id = |index: NodeIndex| {
             let (operator, _) = &self.graph[index];
             let name = match operator {
-                Operator::SourceOp(_) => "Source",
-                Operator::ExtendOp(_) => "Extend",
-                Operator::ProjectOp(_) => "Project",
-                Operator::RenameOp(_) => "Rename",
-                Operator::UnionOp => "Union",
-                Operator::SerializerOp(_) => "Serializer",
-                Operator::TargetOp(_) => "Target",
+                Operator::Source(_) => "Source",
+                Operator::Extend(_) => "Extend",
+                Operator::Project(_) => "Project",
+                Operator::Rename(_) => "Rename",
+                Operator::Join(_) => "Join",
+                Operator::Union => "Union",
+                Operator::Serializer(_) => "Serializer",
+                Operator::Target(_) => "Target",
             };
             format!("{name}_{}", index.index())
         };
@@ -63,14 +74,18 @@ impl Plan {
         let edges = self
             .graph
             .edge_references()
-            .map(|edge| Edge {
-                from: id(edge.source()),
-                to: id(edge.target()),
+            .map(|edge| {
+                // An edge's weight in the graph is its input role.
+                let &role = edge.weight();
+                Edge {
+                    from: id(edge.source()),
+                    to: id(edge.target()),
+                    role,
+                }
             })
             .collect();
         PlanDocument {
             version: VERSION.to_string(),
-            producer: PRODUCER.to_string(),
             nodes,
             edges,
         }
@@ -80,9 +95,8 @@ impl Plan {
 /// A plan as it travels to an engine.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 pub struct PlanDocument {
-    /// The schema version, `MAJOR.MINOR`.
+    /// The version of the algemaploom-rs build that made the plan.
     pub version: String,
-    pub producer: String,
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,
 }
@@ -92,9 +106,9 @@ pub struct Node {
     /// Unique within the plan; it names the node for its edges only.
     pub id: String,
     pub operator: Operator,
-    /// The IRIs of the mapping nodes this operator comes from, such as the
-    /// data descriptions that a Source reads. An origin is for provenance
-    /// only; it never changes what a plan produces.
+    /// The IRIs of the mapping nodes this operator comes from, such as the data descriptions that a Source reads.
+    /// An origin is for provenance only;
+    /// it never changes what a plan produces.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub origin: Vec<String>,
 }
@@ -104,4 +118,14 @@ pub struct Node {
 pub struct Edge {
     pub from: String,
     pub to: String,
+    /// The input `from` is to a Join; absent for every other operator.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<InputRole>,
+}
+
+/// Which input of a Join an edge gives.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, JsonSchema)]
+pub enum InputRole {
+    Left,
+    Right,
 }

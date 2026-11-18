@@ -4,17 +4,19 @@ Written for a CS student who wants to understand MappingLoom as code.
 
 ## Contents
 
-1. [Preface](#preface)
-2. [Agent request contract (for AI agents/LLMs)](#agent-request-contract-for-ai-agentsllms)
-3. [Workspace layout](#workspace-layout)
-4. [How a mapping becomes a plan](#how-a-mapping-becomes-a-plan)
-5. [Requests, results and errors](#requests-results-and-errors)
-6. [The canonical pipeline](#the-canonical-pipeline)
-7. [Build, format and test](#build-format-and-test)
-8. [Test resources](#test-resources)
-9. [Conformance](#conformance)
-10. [Language bindings](#language-bindings)
-11. [Release process](#release-process)
+- [MappingLoom (algemaploom-rs) Handbook](#mappingloom-algemaploom-rs-handbook)
+  - [Contents](#contents)
+  - [Preface](#preface)
+  - [Agent request contract (for AI agents/LLMs)](#agent-request-contract-for-ai-agentsllms)
+  - [Workspace layout](#workspace-layout)
+  - [How a mapping becomes a plan](#how-a-mapping-becomes-a-plan)
+  - [Requests, results and errors](#requests-results-and-errors)
+  - [The canonical pipeline](#the-canonical-pipeline)
+  - [Build, format and test](#build-format-and-test)
+  - [Test resources](#test-resources)
+  - [Conformance](#conformance)
+  - [Language bindings](#language-bindings)
+  - [Release process](#release-process)
 
 ## Preface
 
@@ -45,7 +47,7 @@ the plan.
 
 ## Agent request contract (for AI agents/LLMs)
 
-<!-- software-handbook contract: 2026-10-27 -->
+<!-- software-handbook contract: 2026-11-18 -->
 
 Every implementation request handled by an AI agent/LLM follows these constraints:
 
@@ -68,7 +70,7 @@ Every implementation request handled by an AI agent/LLM follows these constraint
 - Before a release, review everything changed since the previous release (the code for correctness, the documentation and changelog for accuracy and brevity), check the dependencies (undeclared, outdated, vulnerable), and list the open items that change the released artifact, so they ship in this release.
 - Hand over in one short message: what is ready (with a commit message), what needs the maintainer's judgement (each non-obvious removal or changed test, with its evidence), what was verified (commands and results), and the maintainer's next actions in order. Details belong in the changelog and docs.
 - Check whether `README.md` needs updates for user-visible behavior or workflow changes, and update it when needed.
-- Write documentation (this handbook, READMEs, `TODO.md`, `CHANGELOG.md`, code comments) as plain positive statements: say what is true and leave out the contrast ("X, not Y"). Keep a negative only when it is the point itself, such as a prohibition, a warning, or a known limitation.
+- Write documentation (this handbook, READMEs, `TODO.md`, `CHANGELOG.md`, code comments) as plain positive statements: say what is true and leave out the contrast ("X, not Y"). Keep a negative only when it is the point itself, such as a prohibition, a warning, or a known limitation. Break the lines of code comments and Markdown at sentence and clause boundaries; a line is as long as its clause.
 - If there are difficulties during fulfillment, document them in the most appropriate existing handbook location (create a new chapter only when truly necessary) so future requests start with better context.
 - A preference or principle that the maintainer states while handling a request is documented so that every later request follows it: a general one in this contract (and in the software-handbook skill it comes from), a project-specific one in the handbook chapter it belongs to. When it is unclear which, ask.
 - When a request is a list of feedback (such as a `TODO.md`), clean up after handling it: remove the items that are done, keep every open item as a clear task (an open question or an offered follow-up is an open item), and remove temporary files created along the way.
@@ -92,7 +94,7 @@ All crates live under `crates/` and are workspace members (`members = ["crates/*
 | `normalizer` | Normalizes a mapping with SPARQL Update rules over an Oxigraph store: the RML-KGC rule set of the canonical pipeline, and the paper's RML.io rule set (see The canonical pipeline). |
 | `translator_normalized_rml` | Translator for normalized RML documents. |
 | `translator_kgc` | The canonical RML-KGC translator: normalizes a mapping and translates the normal form into an `algemaploom-plan` plan (see The canonical pipeline). |
-| `algemaploom-plan` | The plans of the canonical pipeline: the IR's operators and functions, the plan document and its JSON Schema (see The canonical pipeline). |
+| `algemaploom-plan` | The plans of the canonical pipeline: their operators and expressions, the plan document and its JSON Schema (see The canonical pipeline). |
 | `optimizer` | The optimizer of the canonical pipeline: the `Rule` trait, the rules in the order they run, and their toggles (see The canonical pipeline). |
 | `pipeline-test` | Test harness of the canonical pipeline: graph cases for normalizer rules, and plan snapshots validated against the plan schema. A dev-dependency only. |
 | `sparql-sat-checker` | Checks SPARQL/triples-map satisfiability on plans; uses `translator_normalized_rml`. It carries its own version (`0.1.0`) and edition 2024. Unmaintained and kept for reference: nothing calls it, and its crate documentation lists its known defects. |
@@ -155,15 +157,15 @@ object (`request::Options`), which is JSON in the bindings and in
 | `optimizer` | an object from rule id to `true` or `false`; a rule without a toggle takes its default |
 | `translator` | `legacy` (default) or `canonical`, the canonical pipeline; `canonical` for `rml-kgc` only |
 
-`api::translate` returns a `Translation` (the plan and the warnings) or
-`TranslationErrors` (at least one error, and the warnings found before). A
-panic inside it becomes an *internal* error, so no binding sees a panic.
-`api::translate_json` is the entry point of the bindings: it takes the options
-as JSON text and returns the result document as JSON text, either
-`{"version", "plan", "warnings"}` or `{"version", "errors", "warnings"}`, where
-`version` is the plan schema's version (`algemaploom_plan::VERSION`). One JSON
-encoding, tested once in Rust, serves the three bindings, and a new option or
-error field changes no native signature.
+`api::translate` returns a `Translation` (the plan and the warnings)
+or `TranslationErrors` (at least one error, and the warnings found before).
+A panic inside it becomes an *internal* error, so no binding sees a panic.
+`api::translate_json` is the entry point of the bindings:
+it takes the options as JSON text and returns the result document as JSON text,
+either `{"version", "plan", "warnings"}` or `{"version", "errors", "warnings"}`,
+where `version` is the plan's version (`algemaploom_plan::VERSION`).
+One JSON encoding, tested once in Rust, serves the three bindings,
+and a new option or error field changes no native signature.
 
 An error or a warning is a `report::Record`: `kind`, `code` (stable within
 its kind), `message`, and where known `origin` (the mapping node, as an IRI
@@ -249,57 +251,105 @@ pipeline reads:
   inlined, so it is evaluated as its parent's subject map: with the parent's
   base IRI and the parent's fresh blank nodes.
 
-**Translator.** `translator_kgc::translate` normalizes the mapping and
-translates each normalized triples map into one branch: a Source, an Extend
-that binds `subject`, `predicate`, `object` and, unless the graph is the
-default one, `graph`, a Project and a Serializer with one quad pattern,
-which writes to the default Target (Algorithm 1). A branch has its own
-Serializer, so that a quad pattern without graph is the default graph and a
-branch can route to its own targets. The Source has one field per distinct
-query of the branch's term maps (Algorithm 2), named `q:<query>`; a CSV
-column and a JSONPath without wildcard, recursive descent, filter, union or
-slice are single-valued. A term map is an expression (Algorithm 3, with the
-IR's corrections): a constant is the complete term, a template keeps its
-pieces and the encoding of its term type (IRI-safe for IRI, URI-safe for
-URI, none otherwise), a term map with term type BlankNode and no expression
-is a fresh blank node keyed by the term map's origin, and the term type
-wraps the rest: `Iri` with the triples map's base IRI, `BlankNode`, or
-`Literal` with its datatype or language map. An object map that
-`same-source-joins` inlined takes the base IRI and the fresh blank node key
-of its parent. The normal form has no order, so the branches and the errors
-are sorted by content, which gives the same plan on every run. The
-translator checks every term map and source of every triples map, and
-reports each error once, also when the copies of a triples map share it.
+**Translator.** `translator_kgc::translate` normalizes the mapping
+and translates each normalized triples map into one branch:
+a Source,
+an Extend that binds `subject`, `predicate`, `object` and, unless the graph is the default one, `graph`,
+a Project
+and a Serializer with one quad pattern, which writes to the default Target (Algorithm 1).
+A branch has its own Serializer,
+so that a quad pattern without graph is the default graph
+and a branch can route to its own targets.
+The Source has one field per distinct query of the branch's term maps (Algorithm 2), named `q:<query>`;
+a CSV column and a JSONPath without wildcard, recursive descent, filter, union or slice are single-valued.
+A term map is an expression (Algorithm 3):
+a constant is the complete term,
+a template keeps its pieces and the encoding of its term type (IRI-safe for IRI, URI-safe for URI, none otherwise),
+a term map with term type BlankNode and no expression is a fresh blank node keyed by the term map's origin,
+and the term type wraps the rest:
+`Iri` or `Uri` with the triples map's base IRI, `BlankNode`, or `Literal` with its datatype or language map.
+An object map that `same-source-joins` inlined takes the base IRI and the fresh blank node key of its parent.
+A term map with an RML property that the translator doesn't read is an *unsupported* error,
+so that no feature is dropped silently
+(properties of other vocabularies are annotations);
+a triples map without predicate-object map gives no branch, but its subject map is checked too.
+
+Algorithms 1–3 give one attribute per query and one value per attribute,
+so a query that feeds two term maps correlates their values,
+and a query without value drops the record.
+RML-KGC asks for more, and the plans differ from the paper in these points:
+- An attribute is bound to the *list* of its query's values,
+  and a Serializer takes the product of its positions' lists:
+  several subjects per record give subjects × predicates × objects (core `termmap.md:71`, RMLTC0025c).
+  A query without value binds the empty list, which empties only the term maps that read it.
+- A template takes the product per brace,
+  so a repeated reference takes every combination of its values.
+  Each value enters in its natural RDF lexical form (core `expressions.md:54`),
+  encoded by the term type (core `termmap.md:124-138`).
+  `\{`, `\}` and `\\` are literal characters;
+  any other brace or backslash makes the template invalid, a mapping error.
+- A language or datatype map gives one literal per tag or datatype.
+- A generated IRI that is not valid is a data error (core `output.md:131`).
+- Join keys compare by lexical form,
+  as RMLTC0030c needs (it joins the JSON number 100 with the constant `"100"`);
+  an absent key never matches,
+  and a multi-valued key matches when any of its values does.
+- An empty string is a value;
+  only the format's nulls and the `rml:null` values are absent (RMLSTC0004a, RMLFNMLTC0007-CSV).
+
+A referencing object map that `same-source-joins` left
+(one with join conditions, or over another logical source)
+becomes a Join, as in Algorithm 1:
+the child's Extend binds the subject, predicate and graph and the child map of each join condition (`key:<i>`);
+the parent's Source, with its attributes prefixed `parent:` (its fields by name, `#` by a Rename),
+and an Extend of the parent maps (`parent:key:<i>`) are its Right input;
+the Inner Join compares the keys pairwise, by lexical form,
+and an Extend after it binds the object from the parent's subject map,
+with the parent's base IRI and its fresh blank nodes indexed by `parent:#`,
+so that they are the parent's own subjects.
+A join condition's maps are expression maps without term type.
+Without join conditions the Join has no pairs: the cartesian product of child and parent records.
+The normal form has no order,
+so the join conditions, the branches and the errors are sorted by content,
+which gives the same plan on every run.
+The translator checks every term map and source of every triples map,
+and reports each error once, also when the copies of a triples map share it.
 A term map stops at its first error.
 
-**Optimizer.** The `optimizer` crate rewrites an `algemaploom-plan` plan
-with independent rules, each an implementation of `Rule` with an id (its
-toggle's key, R1 to R7) and a default. `optimizer::rules` lists them in the
-order they run, and `Optimizer::new` switches each on or off from the
-`optimizer` option, rejecting an unknown id. It has no rules yet, so a plan
-passes unchanged; `api::translate` optimizes every canonical plan.
+**Optimizer.** The `optimizer` crate rewrites an `algemaploom-plan` plan with independent rules,
+each an implementation of `Rule` with an id (its toggle's key, such as `R1`) and a default.
+`optimizer::rules` lists them in the order they run,
+and `Optimizer::new` switches each on or off from the `optimizer` option, rejecting an unknown id.
+It has no rules yet, so a plan passes unchanged;
+`api::translate` optimizes every canonical plan.
 
-The processor's base IRI enters the store as `nf:processor rml:baseIRI <…>`
-for `base-iris`, and leaves it after the last rule. The RML.io rule set
-(`normalize_rml_str`, `normalize_rml_path`, the `cli_normalizer` example)
+The processor's base IRI enters the store as `nf:processor rml:baseIRI <…>` for `base-iris`,
+and leaves it after the last rule.
+The RML.io rule set (`normalize_rml_str`, `normalize_rml_path`, the `cli_normalizer` example)
 stays as it is for when RML.io is taken up.
 
-**Plans.** The `algemaploom-plan` crate holds the core of the plans: a
-`Plan` is a petgraph graph of `Operator`s that the builder adds without
-fusing anything, and `Plan::document` gives the `PlanDocument` that travels
-to an engine, with its `version` and `producer`, and edges that name their
-nodes by id. The plans name no mapping language: an Extend binds attributes
-to `Expression`s (references, templates, constants and term constructors), a
-quad pattern without graph goes to the default graph, and an origin is the
-list of IRIs of the mapping nodes an element comes from (skolem IRIs for
-blank nodes), for provenance only. A translator expresses its language's
-semantics in these terms. `VERSION` is the schema's version, `MAJOR.MINOR`,
-independent of the crate version: a new operator, expression or optional
-field is a minor bump. `schema()` generates the JSON Schema from the types
-(`schemars`, which follows their serde attributes), and
-`schema/plan.schema.json` is that schema, committed. An optional field
-carries `#[serde(default, skip_serializing_if = …)]`, since schemars marks a
-field without `default` as required.
+**Plans.** The `algemaploom-plan` crate holds the core of the plans:
+a `Plan` is a petgraph graph of `Operator`s that the builder adds without fusing anything,
+and `Plan::document` gives the `PlanDocument` that travels to an engine,
+with its `version` and edges that name their nodes by id.
+The plans name no mapping language:
+an Extend binds attributes to `Expression`s (references, templates, constants and term constructors),
+a quad pattern without graph goes to the default graph,
+and an origin is the list of IRIs of the mapping nodes an element comes from (skolem IRIs for blank nodes),
+for provenance only.
+A translator expresses its language's semantics in these terms.
+The plans are internal to algemaploom-rs for now,
+so `VERSION`, the plan's `version`, is the crate version.
+From algemaploom-rs 1.0 on, the plans may get a version of their own,
+once they need to evolve apart from the crate.
+The document says what an element is by its keys where those differ, and by `type` where they don't:
+a quad position is `{"attribute": …}` or `{"term": …}`,
+a term `{"iri": …}` or `{"literal": …}`,
+and an operator, an expression or an access carries its `type`.
+`schema()` generates the JSON Schema from the types (`schemars`, which follows their serde attributes),
+and `schema/plan.schema.json` is that schema, committed.
+An optional field carries `#[serde(default, skip_serializing_if = …)]`,
+since schemars marks a field without `default` as required.
 
 ## Build, format and test
 
@@ -366,9 +416,9 @@ The canonical pipeline's tests use the `pipeline-test` harness:
   every blank node it can, and labels only those that are named more than
   once or by an `nf:origin` link, whose `nf:label` is that label.
 - A plan snapshot (`assert_plan_snapshot`) is the plan document as JSON
-  without `version` and `producer`, compared as JSON, after the whole
-  document is validated against the plan schema. `UPDATE_SNAPSHOTS=1`
-  rewrites the snapshots, and `UPDATE_SCHEMA=1 cargo test -p
+  without `version`, compared as JSON, after the whole document is
+  validated against the plan schema. `UPDATE_SNAPSHOTS=1` rewrites the
+  snapshots, and `UPDATE_SCHEMA=1 cargo test -p
   algemaploom-plan` rewrites the committed schema; review either diff as a
   fixture change.
 
@@ -456,7 +506,7 @@ Step-by-step instructions are in [RELEASE.md](RELEASE.md); this section explains
 Between releases the crates, the Java binding and the Node.js package carry
 that `-SNAPSHOT` version, as the KNoWS Java libraries do, so a locally
 installed MappingLoom stays apart from the released artifact in `~/.m2`, and
-a plan's `producer`, `translator-bin --version` and the Python module's
+a plan's `version`, `translator-bin --version` and the Python module's
 `__version__` name a development build.
 
 A pushed tag triggers the `Maven Central Deployment` CI job, which signs and

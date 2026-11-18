@@ -32,6 +32,22 @@ impl Mapping {
             .collect()
     }
 
+    /// The triples maps without predicate-object map: the originals of the
+    /// normalized ones, the parents of joins, and those that produce no
+    /// triples of RML-Core.
+    pub fn triples_maps_without_pom(&self) -> Vec<NamedOrBlankNodeRef<'_>> {
+        let mut seen = HashSet::new();
+        self.graph
+            .triples_for_predicate(vocab::SUBJECT_MAP)
+            .map(|triple| triple.subject)
+            .filter(|triples_map| {
+                self.object(*triples_map, vocab::PREDICATE_OBJECT_MAP)
+                    .is_none()
+                    && seen.insert(*triples_map)
+            })
+            .collect()
+    }
+
     /// The objects of `subject` for `predicate`.
     pub fn objects<'a>(
         &'a self,
@@ -70,6 +86,37 @@ impl Mapping {
             .triples_for_subject(subject)
             .map(|triple| triple.predicate)
             .collect()
+    }
+
+    /// Fails on an RML property of `node` that the translator doesn't read,
+    /// so that none is dropped silently, naming each such property in order.
+    /// Properties of other vocabularies, such as `rdfs:comment`, are
+    /// annotations.
+    pub fn only_known_properties(
+        &self,
+        node: NamedOrBlankNodeRef<'_>,
+        known: &[NamedNodeRef<'_>],
+    ) -> Result<(), String> {
+        let mut unknown: Vec<String> = self
+            .predicates(node)
+            .into_iter()
+            .filter(|p| {
+                p.as_str().starts_with(vocab::RML) && !known.contains(p)
+            })
+            .map(|p| p.to_string())
+            .collect();
+        unknown.sort();
+        unknown.dedup();
+        match unknown.as_slice() {
+            [] => Ok(()),
+            [property] => {
+                Err(format!("the property {property} is not translated yet"))
+            }
+            _ => Err(format!(
+                "the properties {} are not translated yet",
+                unknown.join(", ")
+            )),
+        }
     }
 
     /// The node of the original mapping document that `node` stands for: the

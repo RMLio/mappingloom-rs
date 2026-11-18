@@ -1,42 +1,33 @@
-//! The plans of the canonical pipeline, as a plan document with a schema and
-//! a version. They name no mapping language: a translator expresses each
-//! language's semantics in their operators and expressions.
+//! The plans of the canonical pipeline, as a plan document with a schema and a version.
+//! They name no mapping language:
+//! a translator expresses each language's semantics in their operators and expressions.
 //!
-//! A [`Plan`] is built as a graph of [`Operator`]s and serialized as a
-//! [`PlanDocument`], whose JSON Schema is [`schema`]. A new operator or
-//! expression raises the minor [`VERSION`].
+//! A [`Plan`] is built as a graph of [`Operator`]s and serialized as a [`PlanDocument`],
+//! whose JSON Schema is [`schema`].
 
 mod expression;
 mod operator;
 mod plan;
 
-pub use expression::{Encoding, Expression, IriKind, Piece, Term};
+pub use expression::{Encoding, Expression, Piece, Term};
 pub use operator::{
-    Access, ExtendOp, ExtendPair, Field, Operator, Position, ProjectOp,
-    QuadPattern, RenameOp, RenamePair, Root, SerializerOp, SourceOp, TargetOp,
+    Access, ExtendOp, ExtendPair, Field, JoinKind, JoinOp, JoinPair, Operator,
+    Position, ProjectOp, QuadPattern, RenameOp, RenamePair, Root, SerializerOp,
+    SourceOp, TargetOp,
 };
-pub use plan::{Edge, Node, NodeIndex, Plan, PlanDocument};
+pub use plan::{Edge, InputRole, Node, NodeIndex, Plan, PlanDocument};
 
-/// The schema version of the plan document, `MAJOR.MINOR`. It changes only
-/// when the schema does: a new operator, expression or optional field is a
-/// minor bump, and a form that changes meaning or goes away is a major one.
-pub const VERSION: &str = "1.0";
+/// The version of the plan document: the version of algemaploom-rs, whose plans are internal to it for now.
+/// From algemaploom-rs 1.0 on, the plans may get a version of their own.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// The crate and version that produce a plan, for diagnostics and for the
-/// PROV-O agent.
-pub const PRODUCER: &str =
-    concat!("algemaploom-rs ", env!("CARGO_PKG_VERSION"));
-
-/// The JSON Schema (2020-12) of the plan document, with an `$id` that names
-/// [`VERSION`]. It is committed as `schema/plan.schema.json`.
+/// The JSON Schema (2020-12) of the plan document.
+/// It is committed as `schema/plan.schema.json`.
 pub fn schema() -> serde_json::Value {
     let mut schema = schemars::schema_for!(PlanDocument);
     schema.insert(
         "$id".into(),
-        format!(
-            "https://w3id.org/imec/knows/algemaploom/plan/{VERSION}/plan.schema.json"
-        )
-        .into(),
+        "https://w3id.org/imec/knows/algemaploom/plan/plan.schema.json".into(),
     );
     schema.to_value()
 }
@@ -47,8 +38,9 @@ mod tests {
 
     use super::*;
 
-    /// The committed schema is the generated one, so a change to a plan type
-    /// shows up as a schema diff. `UPDATE_SCHEMA=1 cargo test` rewrites it.
+    /// The committed schema is the generated one,
+    /// so a change to a plan type shows up as a schema diff.
+    /// `UPDATE_SCHEMA=1 cargo test` rewrites it.
     #[test]
     fn committed_schema_is_generated() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))

@@ -45,6 +45,17 @@
         "from": {
           "type": "string"
         },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InputRole"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The input `from` is to a Join; absent for every other operator."
+        },
         "to": {
           "type": "string"
         }
@@ -56,7 +67,7 @@
       "type": "object"
     },
     "Encoding": {
-      "description": "How a template encodes the values of its attributes: IRI-safe (RFC 3987\n`iunreserved` kept), URI-safe (RFC 3986 `unreserved` kept), or not at\nall.",
+      "description": "How a template encodes the values of its attributes:\nIRI-safe (RFC 3987 `iunreserved` kept),\nURI-safe (RFC 3986 `unreserved` kept),\nor not at all.",
       "enum": [
         "IriSafe",
         "UriSafe",
@@ -65,7 +76,7 @@
       "type": "string"
     },
     "Expression": {
-      "description": "An expression of an Extend: it maps an input tuple to a list of values or\nterms. Unless stated otherwise, an expression over several lists yields\none result per combination of their elements, and nothing if one of them\nis absent.",
+      "description": "An expression of an Extend: it maps an input tuple to a list of values or terms.\nUnless stated otherwise,\nan expression over several lists yields one result per combination of their elements,\nand nothing if one of them is absent.",
       "oneOf": [
         {
           "description": "The list bound to an attribute of the input tuple.",
@@ -85,7 +96,7 @@
           "type": "object"
         },
         {
-          "description": "One `xsd:string` value per combination of the values of its\nattributes, one value per attribute piece: the pieces concatenated,\neach value's lexical form encoded by `encoding`. Absent if any\nattribute is absent.",
+          "description": "One `xsd:string` value per combination of the values of its attributes,\none value per attribute piece:\nthe pieces concatenated, each value's lexical form encoded by `encoding`.\nAbsent if any attribute is absent.",
           "properties": {
             "encoding": {
               "$ref": "#/$defs/Encoding"
@@ -126,10 +137,10 @@
           "type": "object"
         },
         {
-          "description": "Per value, its lexical form as an IRI if it is an absolute one,\notherwise `base` followed by it; a data error if neither is valid.",
+          "description": "Per value, its lexical form as an IRI if it is an absolute one,\notherwise `base` followed by it;\na data error if neither is a valid IRI.",
           "properties": {
             "base": {
-              "description": "The IRI that a relative value follows; without it, only an\nabsolute value gives an IRI.",
+              "description": "The IRI that a relative value follows;\nwithout it, only an absolute value gives an IRI.",
               "type": [
                 "string",
                 "null"
@@ -138,9 +149,6 @@
             "inner": {
               "$ref": "#/$defs/Expression"
             },
-            "kind": {
-              "$ref": "#/$defs/IriKind"
-            },
             "type": {
               "const": "Iri",
               "type": "string"
@@ -148,8 +156,30 @@
           },
           "required": [
             "type",
-            "inner",
-            "kind"
+            "inner"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "As `Iri`, checked for an absolute URI instead of an absolute IRI.",
+          "properties": {
+            "base": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "inner": {
+              "$ref": "#/$defs/Expression"
+            },
+            "type": {
+              "const": "Uri",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "inner"
           ],
           "type": "object"
         },
@@ -171,7 +201,7 @@
           "type": "object"
         },
         {
-          "description": "One fresh blank node per tuple, identified by `key` and the values of\nthe `index` attributes. Expressions with the same key give the same\nnode for the same index values.",
+          "description": "One fresh blank node per tuple, identified by `key` and the values of the `index` attributes.\nExpressions with the same key give the same node for the same index values.",
           "properties": {
             "index": {
               "description": "The attributes that identify the tuple's record, `#` first.",
@@ -196,7 +226,7 @@
           "type": "object"
         },
         {
-          "description": "Per value, a literal: its natural RDF literal, or one literal per\ndatatype of `datatype`, or one per language tag of `language`.",
+          "description": "Per value, a literal:\nits natural RDF literal,\nor one literal per datatype of `datatype`,\nor one per language tag of `language`.",
           "properties": {
             "datatype": {
               "anyOf": [
@@ -235,7 +265,7 @@
       ]
     },
     "ExtendOp": {
-      "description": "Binds new attributes, each to the list its expression gives on the input\ntuple. An expression reads input attributes only, never a sibling's.",
+      "description": "Binds new attributes, each to the list its expression gives on the input tuple.\nAn expression reads input attributes only, never a sibling's.",
       "properties": {
         "pairs": {
           "items": {
@@ -292,13 +322,58 @@
       ],
       "type": "object"
     },
-    "IriKind": {
-      "description": "Whether the `Iri` expression checks for an absolute IRI or an absolute\nURI.",
+    "InputRole": {
+      "description": "Which input of a Join an edge gives.",
       "enum": [
-        "Iri",
-        "Uri"
+        "Left",
+        "Right"
       ],
       "type": "string"
+    },
+    "JoinKind": {
+      "description": "What a Join gives for its matches.",
+      "oneOf": [
+        {
+          "const": "Inner",
+          "description": "The union t ∪ t′ of every matching tuple pair.",
+          "type": "string"
+        }
+      ]
+    },
+    "JoinOp": {
+      "description": "Joins the tuples of its Left and Right inputs, whose schemas are disjoint.\nA pair holds for a Left tuple t and a Right tuple t′\nif some value of t's attribute and some value of t′'s have the same lexical form,\nso an absent attribute never matches;\na tuple pair matches if every pair holds,\nso a Join without pairs gives the cartesian product.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/JoinKind"
+        },
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/JoinPair"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "pairs"
+      ],
+      "type": "object"
+    },
+    "JoinPair": {
+      "description": "A Left and a Right attribute whose values a Join compares.",
+      "properties": {
+        "left": {
+          "type": "string"
+        },
+        "right": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "left",
+        "right"
+      ],
+      "type": "object"
     },
     "Node": {
       "properties": {
@@ -310,7 +385,7 @@
           "$ref": "#/$defs/Operator"
         },
         "origin": {
-          "description": "The IRIs of the mapping nodes this operator comes from, such as the\ndata descriptions that a Source reads. An origin is for provenance\nonly; it never changes what a plan produces.",
+          "description": "The IRIs of the mapping nodes this operator comes from, such as the data descriptions that a Source reads.\nAn origin is for provenance only;\nit never changes what a plan produces.",
           "items": {
             "type": "string"
           },
@@ -324,7 +399,7 @@
       "type": "object"
     },
     "Operator": {
-      "description": "An operator of the plan graph. A Source has no input and a Target no\noutput; a Union and a Target take any number of inputs, and every other\noperator exactly one.",
+      "description": "An operator of the plan graph.\nA Source has no input and a Target no output;\na Join takes a Left and a Right input,\na Union and a Target any number of inputs,\nand every other operator exactly one.",
       "oneOf": [
         {
           "properties": {
@@ -332,7 +407,7 @@
               "$ref": "#/$defs/SourceOp"
             },
             "type": {
-              "const": "SourceOp",
+              "const": "Source",
               "type": "string"
             }
           },
@@ -348,7 +423,7 @@
               "$ref": "#/$defs/ExtendOp"
             },
             "type": {
-              "const": "ExtendOp",
+              "const": "Extend",
               "type": "string"
             }
           },
@@ -364,7 +439,7 @@
               "$ref": "#/$defs/ProjectOp"
             },
             "type": {
-              "const": "ProjectOp",
+              "const": "Project",
               "type": "string"
             }
           },
@@ -380,7 +455,23 @@
               "$ref": "#/$defs/RenameOp"
             },
             "type": {
-              "const": "RenameOp",
+              "const": "Rename",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "config"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "config": {
+              "$ref": "#/$defs/JoinOp"
+            },
+            "type": {
+              "const": "Join",
               "type": "string"
             }
           },
@@ -394,7 +485,7 @@
           "description": "The bag union of inputs with equal schemas.",
           "properties": {
             "type": {
-              "const": "UnionOp",
+              "const": "Union",
               "type": "string"
             }
           },
@@ -409,7 +500,7 @@
               "$ref": "#/$defs/SerializerOp"
             },
             "type": {
-              "const": "SerializerOp",
+              "const": "Serializer",
               "type": "string"
             }
           },
@@ -425,7 +516,7 @@
               "$ref": "#/$defs/TargetOp"
             },
             "type": {
-              "const": "TargetOp",
+              "const": "Target",
               "type": "string"
             }
           },
@@ -467,20 +558,14 @@
       ]
     },
     "Position": {
-      "description": "A position of a quad pattern: an attribute, or a constant term.",
-      "oneOf": [
+      "anyOf": [
         {
           "properties": {
             "attribute": {
               "type": "string"
-            },
-            "type": {
-              "const": "Attribute",
-              "type": "string"
             }
           },
           "required": [
-            "type",
             "attribute"
           ],
           "type": "object"
@@ -496,19 +581,15 @@
             },
             "term": {
               "$ref": "#/$defs/Term"
-            },
-            "type": {
-              "const": "Constant",
-              "type": "string"
             }
           },
           "required": [
-            "type",
             "term"
           ],
           "type": "object"
         }
-      ]
+      ],
+      "description": "A position of a quad pattern:\nan attribute, `{\"attribute\": …}`,\nor a constant term, `{\"term\": …}`."
     },
     "ProjectOp": {
       "description": "Keeps the listed attributes.",
@@ -601,7 +682,7 @@
       "type": "string"
     },
     "SerializerOp": {
-      "description": "Per tuple and pattern, one quad per combination of the four positions'\nlists; an absent position gives none.",
+      "description": "Per tuple and pattern, one quad per combination of the four positions' lists;\nan absent position gives none.",
       "properties": {
         "patterns": {
           "items": {
@@ -616,7 +697,7 @@
       "type": "object"
     },
     "SourceOp": {
-      "description": "Yields one tuple per record: `#`, the record's zero-based position in the\niteration, and each field bound to the list of its query's values.",
+      "description": "Yields one tuple per record:\n`#`, the record's zero-based position in the iteration,\nand each field bound to the list of its query's values.",
       "properties": {
         "access": {
           "$ref": "#/$defs/Access"
@@ -641,7 +722,7 @@
           "type": "array"
         },
         "query_language": {
-          "description": "The IRI of the query language of the iterator and the field\nreferences, such as JSONPath; absent for `OneRecord` access.",
+          "description": "The IRI of the query language of the iterator and the field references, such as JSONPath;\nabsent for `OneRecord` access.",
           "type": [
             "string",
             "null"
@@ -655,7 +736,7 @@
       "type": "object"
     },
     "TargetOp": {
-      "description": "Writes the set of the quads of its inputs. The default Target takes its\ndestination and serialization from the engine.",
+      "description": "Writes the set of the quads of its inputs.\nThe default Target takes its destination and serialization from the engine.",
       "properties": {
         "default": {
           "type": "boolean"
@@ -667,26 +748,20 @@
       "type": "object"
     },
     "Term": {
-      "description": "A complete RDF term, as a constant gives it.",
-      "oneOf": [
+      "anyOf": [
         {
           "properties": {
             "iri": {
               "type": "string"
-            },
-            "type": {
-              "const": "Iri",
-              "type": "string"
             }
           },
           "required": [
-            "type",
             "iri"
           ],
           "type": "object"
         },
         {
-          "description": "A literal with a datatype IRI or a language tag; with neither, an\n`xsd:string`.",
+          "description": "A literal with its lexical form and a datatype IRI or a language tag;\nwith neither, an `xsd:string`.",
           "properties": {
             "datatype": {
               "type": [
@@ -700,24 +775,20 @@
                 "null"
               ]
             },
-            "type": {
-              "const": "Literal",
-              "type": "string"
-            },
-            "value": {
+            "literal": {
               "type": "string"
             }
           },
           "required": [
-            "type",
-            "value"
+            "literal"
           ],
           "type": "object"
         }
-      ]
+      ],
+      "description": "A complete RDF term, as a constant gives it: `{\"iri\": …}` or `{\"literal\": …}`."
     }
   },
-  "$id": "https://w3id.org/imec/knows/algemaploom/plan/1.0/plan.schema.json",
+  "$id": "https://w3id.org/imec/knows/algemaploom/plan/plan.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "A plan as it travels to an engine.",
   "properties": {
@@ -733,17 +804,13 @@
       },
       "type": "array"
     },
-    "producer": {
-      "type": "string"
-    },
     "version": {
-      "description": "The schema version, `MAJOR.MINOR`.",
+      "description": "The version of the algemaploom-rs build that made the plan.",
       "type": "string"
     }
   },
   "required": [
     "version",
-    "producer",
     "nodes",
     "edges"
   ],

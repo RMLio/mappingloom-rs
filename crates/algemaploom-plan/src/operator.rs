@@ -3,29 +3,33 @@ use serde::Serialize;
 
 use crate::expression::{Expression, Term};
 
-/// An operator of the plan graph. A Source has no input and a Target no
-/// output; a Union and a Target take any number of inputs, and every other
-/// operator exactly one.
+/// An operator of the plan graph.
+/// A Source has no input and a Target no output;
+/// a Join takes a Left and a Right input,
+/// a Union and a Target any number of inputs,
+/// and every other operator exactly one.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 #[serde(tag = "type", content = "config")]
 pub enum Operator {
-    SourceOp(SourceOp),
-    ExtendOp(ExtendOp),
-    ProjectOp(ProjectOp),
-    RenameOp(RenameOp),
+    Source(SourceOp),
+    Extend(ExtendOp),
+    Project(ProjectOp),
+    Rename(RenameOp),
+    Join(JoinOp),
     /// The bag union of inputs with equal schemas.
-    UnionOp,
-    SerializerOp(SerializerOp),
-    TargetOp(TargetOp),
+    Union,
+    Serializer(SerializerOp),
+    Target(TargetOp),
 }
 
-/// Yields one tuple per record: `#`, the record's zero-based position in the
-/// iteration, and each field bound to the list of its query's values.
+/// Yields one tuple per record:
+/// `#`, the record's zero-based position in the iteration,
+/// and each field bound to the list of its query's values.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 pub struct SourceOp {
     pub access: Access,
-    /// The IRI of the query language of the iterator and the field
-    /// references, such as JSONPath; absent for `OneRecord` access.
+    /// The IRI of the query language of the iterator and the field references, such as JSONPath;
+    /// absent for `OneRecord` access.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub query_language: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -62,8 +66,8 @@ pub struct Field {
     pub single_valued: bool,
 }
 
-/// Binds new attributes, each to the list its expression gives on the input
-/// tuple. An expression reads input attributes only, never a sibling's.
+/// Binds new attributes, each to the list its expression gives on the input tuple.
+/// An expression reads input attributes only, never a sibling's.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 pub struct ExtendOp {
     pub pairs: Vec<ExtendPair>,
@@ -96,8 +100,34 @@ pub struct RenamePair {
     pub to: String,
 }
 
-/// Per tuple and pattern, one quad per combination of the four positions'
-/// lists; an absent position gives none.
+/// Joins the tuples of its Left and Right inputs, whose schemas are disjoint.
+/// A pair holds for a Left tuple t and a Right tuple t′
+/// if some value of t's attribute and some value of t′'s have the same lexical form,
+/// so an absent attribute never matches;
+/// a tuple pair matches if every pair holds,
+/// so a Join without pairs gives the cartesian product.
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+pub struct JoinOp {
+    pub kind: JoinKind,
+    pub pairs: Vec<JoinPair>,
+}
+
+/// What a Join gives for its matches.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, JsonSchema)]
+pub enum JoinKind {
+    /// The union t ∪ t′ of every matching tuple pair.
+    Inner,
+}
+
+/// A Left and a Right attribute whose values a Join compares.
+#[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
+pub struct JoinPair {
+    pub left: String,
+    pub right: String,
+}
+
+/// Per tuple and pattern, one quad per combination of the four positions' lists;
+/// an absent position gives none.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 pub struct SerializerOp {
     pub patterns: Vec<QuadPattern>,
@@ -116,9 +146,11 @@ pub struct QuadPattern {
     pub origin: Vec<String>,
 }
 
-/// A position of a quad pattern: an attribute, or a constant term.
+/// A position of a quad pattern:
+/// an attribute, `{"attribute": …}`,
+/// or a constant term, `{"term": …}`.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
-#[serde(tag = "type")]
+#[serde(untagged)]
 pub enum Position {
     Attribute {
         attribute: String,
@@ -131,8 +163,8 @@ pub enum Position {
     },
 }
 
-/// Writes the set of the quads of its inputs. The default Target takes its
-/// destination and serialization from the engine.
+/// Writes the set of the quads of its inputs.
+/// The default Target takes its destination and serialization from the engine.
 #[derive(Debug, Clone, PartialEq, Serialize, JsonSchema)]
 pub struct TargetOp {
     pub default: bool,

@@ -96,7 +96,7 @@ mod tests {
         }
 
         fn apply(&self, mut plan: Plan) -> Plan {
-            plan.add(Operator::UnionOp, vec![self.0.to_string()]);
+            plan.add(Operator::Union, vec![self.0.to_string()]);
             plan
         }
     }
@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn without_rules_a_plan_passes_unchanged() {
         let mut plan = Plan::new();
-        plan.add(Operator::UnionOp, vec![]);
+        plan.add(Operator::Union, vec![]);
         let optimizer = Optimizer::new(&BTreeMap::new()).unwrap();
         assert_eq!(
             optimizer.optimize(plan.clone()).document(),

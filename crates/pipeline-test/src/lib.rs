@@ -92,16 +92,13 @@ pub fn assert_valid_plan(document: &PlanDocument) {
     assert!(errors.is_empty(), "plan violates the schema: {errors:#?}");
 }
 
-/// Asserts that a plan document is valid and equals the snapshot at
-/// `path`, compared as JSON. The snapshot leaves out `version` and
-/// `producer`, so a version bump or a release rewrites none.
+/// Asserts that a plan document is valid and equals the snapshot at `path`, compared as JSON.
+/// The snapshot leaves out `version`, so a version bump or a release rewrites none.
 /// `UPDATE_SNAPSHOTS=1` writes the snapshot instead.
 pub fn assert_plan_snapshot(document: &PlanDocument, path: &Path) {
     assert_valid_plan(document);
     let mut actual = serde_json::to_value(document).unwrap();
-    let map = actual.as_object_mut().unwrap();
-    map.remove("version");
-    map.remove("producer");
+    actual.as_object_mut().unwrap().remove("version");
     assert_json_snapshot(&actual, path);
 }
 

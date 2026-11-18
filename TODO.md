@@ -6,5 +6,6 @@
 
 - [ ] Decide whether `sparql-sat-checker` and its placeholder binary `sparql-rml-pruner` (`unimplemented!`) are rewritten, for instance as an optional optimizer rule, or removed. Until then they stay as they are, with the known defects listed in the crate documentation.
 - [ ] Add a `cargo clippy --workspace` job to CI; the CI lint stage only checks `CHANGELOG.md`.
+- [ ] Break the lines of the remaining Markdown (`HANDBOOK.md`, `README.md`, `RELEASE.md`) and code comments at sentence and clause boundaries, in one patch of its own.
 
 ## To triage

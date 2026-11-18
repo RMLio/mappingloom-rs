@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "code": "subject-maps",
+      "kind": "Mapping",
+      "message": "a triples map has one subject map, not 0"
+    }
+  ]
+}

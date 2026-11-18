@@ -37,7 +37,7 @@
           "iterator": "$.students[*]",
           "query_language": "http://w3id.org/rml/JSONPath"
         },
-        "type": "SourceOp"
+        "type": "Source"
       },
       "origin": [
         "http://example.com/base/ls"
@@ -64,7 +64,6 @@
                   ],
                   "type": "Template"
                 },
-                "kind": "Iri",
                 "type": "Iri"
               },
               "origin": [
@@ -88,7 +87,7 @@
             }
           ]
         },
-        "type": "ExtendOp"
+        "type": "Extend"
       }
     },
     {
@@ -100,7 +99,7 @@
             "o"
           ]
         },
-        "type": "ProjectOp"
+        "type": "Project"
       }
     },
     {
@@ -110,8 +109,7 @@
           "patterns": [
             {
               "object": {
-                "attribute": "o",
-                "type": "Attribute"
+                "attribute": "o"
               },
               "origin": [
                 "http://example.com/base/TriplesMap1",
@@ -122,19 +120,16 @@
                   "http://example.com/base/pm"
                 ],
                 "term": {
-                  "iri": "http://xmlns.com/foaf/0.1/name",
-                  "type": "Iri"
-                },
-                "type": "Constant"
+                  "iri": "http://xmlns.com/foaf/0.1/name"
+                }
               },
               "subject": {
-                "attribute": "s",
-                "type": "Attribute"
+                "attribute": "s"
               }
             }
           ]
         },
-        "type": "SerializerOp"
+        "type": "Serializer"
       },
       "origin": [
         "http://example.com/base/TriplesMap1"
@@ -146,7 +141,7 @@
         "config": {
           "default": true
         },
-        "type": "TargetOp"
+        "type": "Target"
       }
     }
   ]

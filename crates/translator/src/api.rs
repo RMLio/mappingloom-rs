@@ -273,7 +273,7 @@ mod tests {
         ))
         .unwrap();
         assert_eq!(plan["version"], algemaploom_plan::VERSION);
-        assert_eq!(plan["nodes"][1]["operator"]["type"], "SourceOp");
+        assert_eq!(plan["nodes"][1]["operator"]["type"], "Source");
 
         let options = Options {
             translator: Translator::Canonical,

@@ -1,0 +1,14 @@
+{
+  "errors": [
+    {
+      "code": "invalid-constant",
+      "kind": "Mapping",
+      "message": "a-spanish is no language tag: The given language subtag is invalid"
+    },
+    {
+      "code": "invalid-constant",
+      "kind": "Mapping",
+      "message": "a-english is no language tag: The given language subtag is invalid"
+    }
+  ]
+}

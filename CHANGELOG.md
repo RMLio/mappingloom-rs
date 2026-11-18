@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `RELEASE.md` documents deploying the Java binding to Maven Central by hand.
+- `translator_kgc` translates referencing object maps into an inner Join of the child's and the parent's Source on the child and parent maps of their join conditions, which compares lexical forms; without join conditions over another logical source, the Join gives the cartesian product (see HANDBOOK: The canonical pipeline). Plans have a Join operator, and Left and Right roles for its input edges.
+
+### Changed
+- **Breaking:** plan documents carry the algemaploom-rs version as `version` and no `producer`; a quad position is `{"attribute": …}` or `{"term": …}`, a constant term `{"iri": …}` or `{"literal": …}`, term type URI has its own `Uri` expression, and operator types have no `Op` suffix.
+- HANDBOOK states the plans' value semantics where RML-KGC needs more than Min & Hartig; the comments and HANDBOOK paragraphs rewritten here break lines at clauses.
+
+### Fixed
+- `translator_kgc` reports every term map property it doesn't read as *unsupported*, such as RML-FNML's `rml:condition`, and checks the subject map of a triples map without predicate-object maps, so a gather map there is reported too.
+- `translator_kgc`'s plan snapshots (`tests/core/`) are under version control.
 
 ## [0.9.0] - 2026-11-04
 

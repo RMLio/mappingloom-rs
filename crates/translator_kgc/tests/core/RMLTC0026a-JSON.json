@@ -1,0 +1,308 @@
+{
+  "edges": [
+    {
+      "from": "Source_1",
+      "to": "Extend_2"
+    },
+    {
+      "from": "Extend_2",
+      "to": "Project_3"
+    },
+    {
+      "from": "Project_3",
+      "to": "Serializer_4"
+    },
+    {
+      "from": "Serializer_4",
+      "to": "Target_0"
+    },
+    {
+      "from": "Source_5",
+      "to": "Extend_6"
+    },
+    {
+      "from": "Extend_6",
+      "to": "Project_7"
+    },
+    {
+      "from": "Project_7",
+      "to": "Serializer_8"
+    },
+    {
+      "from": "Serializer_8",
+      "to": "Target_0"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "Target_0",
+      "operator": {
+        "config": {
+          "default": true
+        },
+        "type": "Target"
+      }
+    },
+    {
+      "id": "Source_1",
+      "operator": {
+        "config": {
+          "access": {
+            "path": "persons.json",
+            "root": "MappingDirectory",
+            "type": "File"
+          },
+          "fields": [
+            {
+              "attribute": "q:$.amount",
+              "reference": "$.amount",
+              "single_valued": true
+            },
+            {
+              "attribute": "q:$.fname",
+              "reference": "$.fname",
+              "single_valued": true
+            }
+          ],
+          "iterator": "$.persons[*]",
+          "query_language": "http://w3id.org/rml/JSONPath"
+        },
+        "type": "Source"
+      },
+      "origin": [
+        "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n1"
+      ]
+    },
+    {
+      "id": "Extend_2",
+      "operator": {
+        "config": {
+          "pairs": [
+            {
+              "attribute": "subject",
+              "expression": {
+                "base": "http://example.com/",
+                "inner": {
+                  "encoding": "IriSafe",
+                  "pieces": [
+                    {
+                      "attribute": "q:$.fname"
+                    }
+                  ],
+                  "type": "Template"
+                },
+                "type": "Iri"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n4"
+              ]
+            },
+            {
+              "attribute": "predicate",
+              "expression": {
+                "term": {
+                  "iri": "http://example.com/amount"
+                },
+                "type": "Constant"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n5"
+              ]
+            },
+            {
+              "attribute": "object",
+              "expression": {
+                "inner": {
+                  "attribute": "q:$.amount",
+                  "type": "Reference"
+                },
+                "type": "Literal"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n5",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n6"
+              ]
+            }
+          ]
+        },
+        "type": "Extend"
+      }
+    },
+    {
+      "id": "Project_3",
+      "operator": {
+        "config": {
+          "attributes": [
+            "subject",
+            "predicate",
+            "object"
+          ]
+        },
+        "type": "Project"
+      }
+    },
+    {
+      "id": "Serializer_4",
+      "operator": {
+        "config": {
+          "patterns": [
+            {
+              "object": {
+                "attribute": "object"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap1",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n5"
+              ],
+              "predicate": {
+                "attribute": "predicate"
+              },
+              "subject": {
+                "attribute": "subject"
+              }
+            }
+          ]
+        },
+        "type": "Serializer"
+      },
+      "origin": [
+        "http://example.com/base/TriplesMap1"
+      ]
+    },
+    {
+      "id": "Source_5",
+      "operator": {
+        "config": {
+          "access": {
+            "path": "persons.json",
+            "root": "MappingDirectory",
+            "type": "File"
+          },
+          "fields": [
+            {
+              "attribute": "q:$.amount",
+              "reference": "$.amount",
+              "single_valued": true
+            },
+            {
+              "attribute": "q:$.lname",
+              "reference": "$.lname",
+              "single_valued": true
+            }
+          ],
+          "iterator": "$.persons[*]",
+          "query_language": "http://w3id.org/rml/JSONPath"
+        },
+        "type": "Source"
+      },
+      "origin": [
+        "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n2"
+      ]
+    },
+    {
+      "id": "Extend_6",
+      "operator": {
+        "config": {
+          "pairs": [
+            {
+              "attribute": "subject",
+              "expression": {
+                "base": "http://example.com/base/",
+                "inner": {
+                  "encoding": "IriSafe",
+                  "pieces": [
+                    {
+                      "text": "http://example.com/"
+                    },
+                    {
+                      "attribute": "q:$.lname"
+                    }
+                  ],
+                  "type": "Template"
+                },
+                "type": "Iri"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap2",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n3"
+              ]
+            },
+            {
+              "attribute": "predicate",
+              "expression": {
+                "term": {
+                  "iri": "http://example.com/amount"
+                },
+                "type": "Constant"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap2",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n0"
+              ]
+            },
+            {
+              "attribute": "object",
+              "expression": {
+                "inner": {
+                  "attribute": "q:$.amount",
+                  "type": "Reference"
+                },
+                "type": "Literal"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap2",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n0",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n7"
+              ]
+            }
+          ]
+        },
+        "type": "Extend"
+      }
+    },
+    {
+      "id": "Project_7",
+      "operator": {
+        "config": {
+          "attributes": [
+            "subject",
+            "predicate",
+            "object"
+          ]
+        },
+        "type": "Project"
+      }
+    },
+    {
+      "id": "Serializer_8",
+      "operator": {
+        "config": {
+          "patterns": [
+            {
+              "object": {
+                "attribute": "object"
+              },
+              "origin": [
+                "http://example.com/base/TriplesMap2",
+                "https://github.com/RMLio/algemaploom-rs/.well-known/genid/c14n0"
+              ],
+              "predicate": {
+                "attribute": "predicate"
+              },
+              "subject": {
+                "attribute": "subject"
+              }
+            }
+          ]
+        },
+        "type": "Serializer"
+      },
+      "origin": [
+        "http://example.com/base/TriplesMap2"
+      ]
+    }
+  ]
+}

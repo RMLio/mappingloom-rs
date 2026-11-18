@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "code": "constant-blank-node",
+      "kind": "Mapping",
+      "message": "a constant term map can't have term type BlankNode"
+    }
+  ]
+}
